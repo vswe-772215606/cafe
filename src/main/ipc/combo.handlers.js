@@ -21,6 +21,10 @@ function registerComboHandlers() {
   ipcMain.handle('combo:setActive', (_event, { id, isActive }) => {
     return service.setActive(id, isActive);
   });
+
+  ipcMain.handle('combo:delete', (_event, id) => {
+    return service.deleteById(id);
+  });
 }
 
 module.exports = {

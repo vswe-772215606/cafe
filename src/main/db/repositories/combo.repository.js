@@ -160,6 +160,28 @@ function setActive(id, isActive) {
   return getById(id);
 }
 
+function isUsedInOrders(id) {
+  const statement = db.prepare(`
+    SELECT 1
+    FROM order_items
+    WHERE order_items.combo_id = ?
+    LIMIT 1
+  `);
+
+  return Boolean(statement.get(id));
+}
+
+function deleteById(id) {
+  const statement = db.prepare(`
+    DELETE FROM combos
+    WHERE id = ?
+  `);
+
+  const result = statement.run(id);
+
+  return result.changes > 0;
+}
+
 module.exports = {
   getAll,
   getById,
@@ -169,4 +191,6 @@ module.exports = {
   create,
   update,
   setActive,
+  isUsedInOrders,
+  deleteById,
 };

@@ -193,10 +193,37 @@ function setActive(id, isActive) {
   return comboRepo.setActive(id, isActive);
 }
 
+function deleteById(id) {
+  id = Number(id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error('INVALID_ID');
+  }
+
+  const combo = comboRepo.getById(id);
+
+  if (!combo) {
+    throw new Error('COMBO_NOT_FOUND');
+  }
+
+  if (comboRepo.isUsedInOrders(id)) {
+    throw new Error('COMBO_DELETE_FAILED');
+  }
+
+  const deleted = comboRepo.deleteById(id);
+
+  if (!deleted) {
+    throw new Error('COMBO_DELETE_FAILED');
+  }
+
+  return true;
+}
+
 module.exports = {
   getAll,
   getById,
   create,
   update,
   setActive,
+  deleteById,
 };

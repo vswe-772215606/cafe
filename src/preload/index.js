@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('api', {
     create: (payload) => ipcRenderer.invoke('combo:create', payload),
     update: (id, data) => ipcRenderer.invoke('combo:update', { id, data }),
     setActive: (id, isActive) => ipcRenderer.invoke('combo:setActive', { id, isActive }),
+    delete: (id) => ipcRenderer.invoke('combo:delete', id),
   },
   order: {
     getById: (id) => ipcRenderer.invoke('order:getById', id),
