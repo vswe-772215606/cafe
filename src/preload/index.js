@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('api', {
     listOpenDineInOrders: () => ipcRenderer.invoke('order:listOpenDineInOrders'),
     listOpenTakeawayOrders: () => ipcRenderer.invoke('order:listOpenTakeawayOrders'),
     listRecentOrders: (limit) => ipcRenderer.invoke('order:listRecentOrders', limit),
+    listReadyOrders: (limit) => ipcRenderer.invoke('order:listReadyOrders', limit),
   },
   analytics: {
     getSummary: (payload) => ipcRenderer.invoke('analytics:getSummary', payload),

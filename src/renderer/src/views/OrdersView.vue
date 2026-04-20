@@ -1,104 +1,163 @@
 <template>
   <BasePage>
-    <BaseSectionHeader
-      title="Buyurtmalar"
-      description="Bu yerda buyurtmalar bilan ishlash mumkin."
-    />
+    <BaseSectionHeader title="Buyurtmalar" />
 
     <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
 
-    <div class="mode-switch">
-      <BaseButton
-        :variant="activeMode === 'DINE_IN' ? 'primary' : 'secondary'"
-        @click="switchMode('DINE_IN')"
-      >
-        Zalda
-      </BaseButton>
-      <BaseButton
-        :variant="activeMode === 'TAKEAWAY' ? 'primary' : 'secondary'"
-        @click="switchMode('TAKEAWAY')"
-      >
-        Olib ketish
-      </BaseButton>
-    </div>
-
-    <div class="orders-layout">
-      <div class="sidebar-stack">
-        <BaseCard v-if="loading">
-          <p class="state-text">Yuklanmoqda...</p>
-        </BaseCard>
-
-        <template v-else>
-          <BaseCard v-if="activeMode === 'DINE_IN'">
-            <div class="section-head">
-              <h3 class="section-title">Zalda</h3>
-              <span class="section-meta">{{ openDineInOrders.length }} ta ochiq</span>
-            </div>
-
-            <div class="table-grid">
-              <button
-                v-for="table in tables"
-                :key="table.id"
-                type="button"
-                :class="[
-                  'table-tile',
-                  selectedTableId === table.id ? 'table-tile--selected' : '',
-                  openDineInMap[table.id] ? 'table-tile--busy' : '',
-                ]"
-                @click="selectDineInTable(table)"
+    <div class="page-layout">
+      <div class="left-column">
+        <BaseCard>
+          <div class="top-controls">
+            <div class="mode-actions">
+              <BaseButton
+                :variant="activeMode === 'DINE_IN' ? 'primary' : 'secondary'"
+                @click="activeMode = 'DINE_IN'"
               >
-                <span class="table-name">Stol #{{ table.number }}</span>
-                <span class="table-note">
-                  {{ openDineInMap[table.id] ? 'Ochiq buyurtma bor' : 'Bo‘sh' }}
-                </span>
-              </button>
-            </div>
-
-            <BaseEmptyState
-              v-if="tables.length === 0"
-              message="Hozircha stollar yo‘q."
-            />
-          </BaseCard>
-
-          <BaseCard v-else>
-            <div class="section-head">
-              <h3 class="section-title">Olib ketish</h3>
-              <BaseButton @click="createTakeawayOrder">
-                <template #icon>
-                  <Plus />
-                </template>
-                Yangi olib ketish buyurtmasi
+                Zalda
+              </BaseButton>
+              <BaseButton
+                :variant="activeMode === 'TAKEAWAY' ? 'primary' : 'secondary'"
+                @click="activeMode = 'TAKEAWAY'"
+              >
+                Olib ketish
               </BaseButton>
             </div>
 
-            <div v-if="openTakeawayOrders.length === 0">
-              <BaseEmptyState message="Hozircha ochiq olib ketish buyurtmalari yo‘q." />
-            </div>
+            <BaseButton
+              v-if="activeMode === 'TAKEAWAY'"
+              :disabled="actionLoading"
+              @click="createTakeawayOrder"
+            >
+              <template #icon>
+                <Plus />
+              </template>
+              Yangi olib ketish buyurtmasi
+            </BaseButton>
+          </div>
 
-            <div v-else class="takeaway-list">
-              <button
-                v-for="order in openTakeawayOrders"
-                :key="order.id"
-                type="button"
-                :class="[
-                  'takeaway-tile',
-                  selectedOrderId === order.id ? 'takeaway-tile--selected' : '',
-                ]"
-                @click="selectOrder(order.id)"
-              >
-                <span class="takeaway-title">Buyurtma #{{ order.id }}</span>
-                <span class="takeaway-note">{{ formatPrice(order.total_price) }}</span>
-              </button>
-            </div>
-          </BaseCard>
+          <div v-if="loading" class="state-text">Yuklanmoqda...</div>
 
-          <BaseCard v-if="activeMode === 'DINE_IN' && openDineInOrders.length === 0 && tables.length > 0">
-            <BaseEmptyState message="Hozircha ochiq zal buyurtmalari yo‘q." />
-          </BaseCard>
-        </template>
+          <div v-else-if="activeMode === 'DINE_IN'" class="table-grid">
+            <button
+              v-for="table in tables"
+              :key="table.id"
+              type="button"
+              :class="[
+                'table-tile',
+                selectedTableId === table.id ? 'table-tile--selected' : '',
+                openDineInMap[table.id] ? 'table-tile--busy' : '',
+              ]"
+              @click="selectTable(table.id)"
+            >
+              <span class="table-tile__title">Stol #{{ table.number }}</span>
+            </button>
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="section-header">
+            <h3 class="section-title">Ochiq zal buyurtmalari</h3>
+          </div>
+
+          <BaseEmptyState
+            v-if="!loading && openDineInOrders.length === 0"
+            message="Hozircha ochiq zal buyurtmalari yo‘q."
+          />
+
+          <div v-else class="board-grid">
+            <div
+              v-for="order in openDineInOrders"
+              :key="order.id"
+              class="board-card"
+            >
+              <div class="board-info">
+                <p class="board-title">#{{ order.id }}</p>
+                <p class="board-text">Stol #{{ order.table_number }}</p>
+              </div>
+              <div class="board-footer">
+                <strong>{{ formatPrice(order.total_price) }}</strong>
+                <BaseButton variant="secondary" @click="openExistingOrder(order.id, order.table_id)">
+                  Ochish
+                </BaseButton>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="section-header">
+            <h3 class="section-title">Ochiq olib ketish buyurtmalari</h3>
+          </div>
+
+          <BaseEmptyState
+            v-if="!loading && openTakeawayOrders.length === 0"
+            message="Hozircha ochiq olib ketish buyurtmalari yo‘q."
+          />
+
+          <div v-else class="board-grid">
+            <div
+              v-for="order in openTakeawayOrders"
+              :key="order.id"
+              class="board-card"
+            >
+              <div class="board-info">
+                <p class="board-title">#{{ order.id }}</p>
+                <p class="board-text">Olib ketish</p>
+              </div>
+              <div class="board-footer">
+                <strong>{{ formatPrice(order.total_price) }}</strong>
+                <BaseButton variant="secondary" @click="openExistingOrder(order.id)">
+                  Ochish
+                </BaseButton>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="section-header">
+            <h3 class="section-title">Tayyor buyurtmalar</h3>
+            <BaseButton
+              variant="ghost"
+              :disabled="displayedReadyOrders.length === 0"
+              @click="clearAllReadyOrders"
+            >
+              Barchasini tozalash
+            </BaseButton>
+          </div>
+
+          <BaseEmptyState
+            v-if="!loading && displayedReadyOrders.length === 0"
+            message="Hozircha tayyor buyurtmalar yo‘q."
+          />
+
+          <div v-else class="ready-grid">
+            <div
+              v-for="order in displayedReadyOrders"
+              :key="order.id"
+              class="board-card board-card--ready"
+            >
+              <div class="board-info">
+                <p class="board-title">#{{ order.id }}</p>
+                <p class="board-text">
+                  {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
+                  <span v-if="order.table_number">• Stol #{{ order.table_number }}</span>
+                </p>
+                <p class="board-text">{{ formatTime(order.closed_at) }}</p>
+              </div>
+
+              <div class="board-footer">
+                <strong>{{ formatPrice(order.total_price) }}</strong>
+                <BaseButton variant="ghost" @click="clearReadyOrder(order.id)">
+                  Tozalash
+                </BaseButton>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
       </div>
 
-      <div class="workspace-stack">
+      <div class="right-column">
         <BaseCard v-if="workspaceLoading">
           <p class="state-text">Yuklanmoqda...</p>
         </BaseCard>
@@ -110,24 +169,142 @@
 
         <template v-else>
           <BaseCard>
-            <div class="summary-head">
+            <div class="order-summary">
               <div>
-                <h3 class="summary-title">Buyurtma #{{ activeOrder.id }}</h3>
-                <p class="summary-text">
+                <h3 class="section-title">Buyurtma #{{ activeOrder.id }}</h3>
+                <p class="summary-line">
                   {{ activeOrder.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
                   <span v-if="activeOrder.table_number">• Stol #{{ activeOrder.table_number }}</span>
                 </p>
               </div>
 
-              <div class="summary-badges">
-                <span :class="['status-badge', statusClass(activeOrder.status)]">
-                  {{ orderStatusLabel(activeOrder.status) }}
-                </span>
-                <span class="total-badge">{{ formatPrice(activeOrder.total_price) }}</span>
+              <div class="summary-meta">
+                <div class="summary-pill">
+                  <span class="summary-label">Holati</span>
+                  <strong>{{ orderStatusText(activeOrder.status) }}</strong>
+                </div>
+                <div class="summary-pill">
+                  <span class="summary-label">Jami</span>
+                  <strong>{{ formatPrice(activeOrder.total_price) }}</strong>
+                </div>
+              </div>
+            </div>
+          </BaseCard>
+
+          <div class="workspace-grid">
+            <BaseCard>
+              <div class="section-header">
+                <h3 class="section-title">Taomlar</h3>
+              </div>
+
+              <div v-if="activeFoods.length === 0" class="state-text">Yuklanmoqda...</div>
+
+              <div v-else class="product-grid">
+                <div v-for="food in activeFoods" :key="food.id" class="product-card">
+                  <div>
+                    <p class="product-title">{{ food.name }}</p>
+                    <p class="product-price">{{ formatPrice(food.price) }}</p>
+                  </div>
+                  <BaseButton
+                    :disabled="!isOrderOpen || actionLoading"
+                    @click="addFood(food.id)"
+                  >
+                    <template #icon>
+                      <Plus />
+                    </template>
+                    Qo‘shish
+                  </BaseButton>
+                </div>
+              </div>
+            </BaseCard>
+
+            <BaseCard>
+              <div class="section-header">
+                <h3 class="section-title">Combo</h3>
+              </div>
+
+              <div v-if="activeCombos.length === 0" class="state-text">Yuklanmoqda...</div>
+
+              <div v-else class="product-grid">
+                <div v-for="combo in activeCombos" :key="combo.id" class="product-card">
+                  <div>
+                    <p class="product-title">{{ combo.name }}</p>
+                    <p class="product-price">{{ formatPrice(combo.price) }}</p>
+                  </div>
+                  <BaseButton
+                    :disabled="!isOrderOpen || actionLoading"
+                    @click="addCombo(combo.id)"
+                  >
+                    <template #icon>
+                      <Plus />
+                    </template>
+                    Qo‘shish
+                  </BaseButton>
+                </div>
+              </div>
+            </BaseCard>
+          </div>
+
+          <BaseCard>
+            <div class="section-header">
+              <h3 class="section-title">Buyurtma tarkibi</h3>
+            </div>
+
+            <div v-if="activeOrder.items.length === 0" class="state-text">
+              Buyurtma tanlanmagan.
+            </div>
+
+            <div v-else class="items-list">
+              <div
+                v-for="item in activeOrder.items"
+                :key="item.id"
+                class="item-row"
+              >
+                <div class="item-info">
+                  <p class="product-title">{{ item.item_name }}</p>
+                  <p class="board-text">
+                    {{ formatPrice(item.unit_price) }} • {{ formatPrice(item.total_price) }}
+                  </p>
+                </div>
+
+                <div class="item-actions">
+                  <BaseButton
+                    variant="secondary"
+                    :disabled="!isOrderOpen || actionLoading || item.quantity <= 1"
+                    @click="changeQuantity(item, item.quantity - 1)"
+                  >
+                    <template #icon>
+                      <Minus />
+                    </template>
+                  </BaseButton>
+
+                  <span class="quantity-badge">{{ item.quantity }}</span>
+
+                  <BaseButton
+                    variant="secondary"
+                    :disabled="!isOrderOpen || actionLoading"
+                    @click="changeQuantity(item, item.quantity + 1)"
+                  >
+                    <template #icon>
+                      <Plus />
+                    </template>
+                  </BaseButton>
+
+                  <BaseButton
+                    variant="danger"
+                    :disabled="!isOrderOpen || actionLoading"
+                    @click="removeItem(item.id)"
+                  >
+                    <template #icon>
+                      <Trash2 />
+                    </template>
+                    Olib tashlash
+                  </BaseButton>
+                </div>
               </div>
             </div>
 
-            <div class="summary-actions">
+            <div class="final-actions">
               <BaseButton
                 :disabled="!isOrderOpen || actionLoading"
                 @click="markReady"
@@ -149,133 +326,6 @@
               </BaseButton>
             </div>
           </BaseCard>
-
-          <div class="workspace-grid">
-            <BaseCard>
-              <div class="section-head">
-                <h3 class="section-title">Taom qo‘shish</h3>
-              </div>
-
-              <div v-if="activeFoods.length === 0">
-                <BaseEmptyState message="Hozircha taomlar yo‘q." />
-              </div>
-
-              <div v-else class="product-list">
-                <div v-for="food in activeFoods" :key="food.id" class="product-row">
-                  <div>
-                    <p class="product-name">{{ food.name }}</p>
-                    <p class="product-meta">{{ formatPrice(food.price) }}</p>
-                  </div>
-
-                  <div class="inline-actions">
-                    <input
-                      v-model="foodQuantities[food.id]"
-                      class="qty-input"
-                      type="number"
-                      min="1"
-                      :disabled="!isOrderOpen || actionLoading"
-                    />
-                    <BaseButton
-                      :disabled="!isOrderOpen || actionLoading"
-                      @click="addFood(food)"
-                    >
-                      <template #icon>
-                        <Plus />
-                      </template>
-                      Qo‘shish
-                    </BaseButton>
-                  </div>
-                </div>
-              </div>
-            </BaseCard>
-
-            <BaseCard>
-              <div class="section-head">
-                <h3 class="section-title">Combo qo‘shish</h3>
-              </div>
-
-              <div v-if="activeCombos.length === 0">
-                <BaseEmptyState message="Hozircha combo yo‘q." />
-              </div>
-
-              <div v-else class="product-list">
-                <div v-for="combo in activeCombos" :key="combo.id" class="product-row">
-                  <div>
-                    <p class="product-name">{{ combo.name }}</p>
-                    <p class="product-meta">{{ formatPrice(combo.price) }}</p>
-                  </div>
-
-                  <div class="inline-actions">
-                    <input
-                      v-model="comboQuantities[combo.id]"
-                      class="qty-input"
-                      type="number"
-                      min="1"
-                      :disabled="!isOrderOpen || actionLoading"
-                    />
-                    <BaseButton
-                      :disabled="!isOrderOpen || actionLoading"
-                      @click="addCombo(combo)"
-                    >
-                      <template #icon>
-                        <Plus />
-                      </template>
-                      Qo‘shish
-                    </BaseButton>
-                  </div>
-                </div>
-              </div>
-            </BaseCard>
-          </div>
-
-          <BaseCard>
-            <div class="section-head">
-              <h3 class="section-title">Buyurtma tarkibi</h3>
-            </div>
-
-            <BaseEmptyState
-              v-if="activeOrder.items.length === 0"
-              message="Buyurtmada mahsulot yo‘q."
-            />
-
-            <div v-else class="order-items">
-              <div
-                v-for="item in activeOrder.items"
-                :key="item.id"
-                class="order-item"
-              >
-                <div>
-                  <p class="product-name">{{ item.item_name }}</p>
-                  <p class="product-meta">
-                    {{ item.type === 'FOOD' ? 'Taom' : 'Combo' }} •
-                    {{ formatPrice(item.unit_price) }}
-                  </p>
-                </div>
-
-                <div class="inline-actions">
-                  <input
-                    :value="String(item.quantity)"
-                    class="qty-input"
-                    type="number"
-                    min="1"
-                    :disabled="!isOrderOpen || actionLoading"
-                    @change="changeItemQuantity(item, $event)"
-                  />
-                  <span class="item-total">{{ formatPrice(item.total_price) }}</span>
-                  <BaseButton
-                    variant="danger"
-                    :disabled="!isOrderOpen || actionLoading"
-                    @click="removeItem(item)"
-                  >
-                    <template #icon>
-                      <Trash2 />
-                    </template>
-                    Olib tashlash
-                  </BaseButton>
-                </div>
-              </div>
-            </div>
-          </BaseCard>
         </template>
       </div>
     </div>
@@ -284,7 +334,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { Ban, Check, Plus, Trash2 } from 'lucide-vue-next';
+import { Ban, Check, Minus, Plus, Trash2 } from 'lucide-vue-next';
 import { api } from '../services/api';
 import BaseButton from '../components/base/BaseButton.vue';
 import BaseCard from '../components/base/BaseCard.vue';
@@ -299,24 +349,25 @@ const workspaceLoading = ref(false);
 const actionLoading = ref(false);
 const errorMessage = ref('');
 const activeMode = ref('DINE_IN');
+const selectedTableId = ref(null);
+const activeOrder = ref(null);
 const tables = ref([]);
 const foods = ref([]);
 const combos = ref([]);
 const openDineInOrders = ref([]);
 const openTakeawayOrders = ref([]);
-const activeOrder = ref(null);
-const selectedOrderId = ref(null);
-const selectedTableId = ref(null);
-const foodQuantities = ref({});
-const comboQuantities = ref({});
+const readyOrders = ref([]);
+const clearedReadyOrderIds = ref([]);
 
+const activeFoods = computed(() => foods.value.filter((item) => item.is_active === 1));
+const activeCombos = computed(() => combos.value.filter((item) => item.is_active === 1));
+const isOrderOpen = computed(() => activeOrder.value?.status === 'OPEN');
 const openDineInMap = computed(() =>
   Object.fromEntries(openDineInOrders.value.map((order) => [order.table_id, order]))
 );
-
-const activeFoods = computed(() => foods.value.filter((food) => food.is_active === 1));
-const activeCombos = computed(() => combos.value.filter((combo) => combo.is_active === 1));
-const isOrderOpen = computed(() => activeOrder.value?.status === 'OPEN');
+const displayedReadyOrders = computed(() =>
+  readyOrders.value.filter((order) => !clearedReadyOrderIds.value.includes(order.id))
+);
 
 function mapErrorMessage(error) {
   switch (error?.message) {
@@ -349,7 +400,20 @@ function formatPrice(price) {
   return `${Number(price || 0).toLocaleString('uz-UZ')} so‘m`;
 }
 
-function orderStatusLabel(status) {
+function formatTime(value) {
+  if (!value) {
+    return '';
+  }
+
+  return new Date(value).toLocaleString('uz-UZ', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function orderStatusText(status) {
   if (status === 'READY') {
     return 'Tayyor';
   }
@@ -361,30 +425,17 @@ function orderStatusLabel(status) {
   return 'Ochiq';
 }
 
-function statusClass(status) {
-  if (status === 'READY') {
-    return 'status-badge--ready';
-  }
-
-  if (status === 'CANCELLED') {
-    return 'status-badge--cancelled';
-  }
-
-  return 'status-badge--open';
-}
-
-function switchMode(mode) {
-  activeMode.value = mode;
-  errorMessage.value = '';
-  activeOrder.value = null;
-  selectedOrderId.value = null;
-
-  if (mode === 'TAKEAWAY') {
-    selectedTableId.value = null;
+function clearReadyOrder(orderId) {
+  if (!clearedReadyOrderIds.value.includes(orderId)) {
+    clearedReadyOrderIds.value = [...clearedReadyOrderIds.value, orderId];
   }
 }
 
-async function loadStaticData() {
+function clearAllReadyOrders() {
+  clearedReadyOrderIds.value = readyOrders.value.map((order) => order.id);
+}
+
+async function loadResources() {
   const [tableList, foodList, comboList] = await Promise.all([
     api.table.getAll(),
     api.food.getAll(),
@@ -394,53 +445,54 @@ async function loadStaticData() {
   tables.value = tableList;
   foods.value = foodList;
   combos.value = comboList;
-
-  foodQuantities.value = Object.fromEntries(foodList.map((food) => [food.id, '1']));
-  comboQuantities.value = Object.fromEntries(comboList.map((combo) => [combo.id, '1']));
 }
 
-async function loadOpenOrders() {
-  const [dineInList, takeawayList] = await Promise.all([
+async function loadBoards() {
+  const [dineIn, takeaway, ready] = await Promise.all([
     orderApi.listOpenDineInOrders(),
     orderApi.listOpenTakeawayOrders(),
+    orderApi.listReadyOrders(20),
   ]);
 
-  openDineInOrders.value = dineInList;
-  openTakeawayOrders.value = takeawayList;
+  openDineInOrders.value = dineIn;
+  openTakeawayOrders.value = takeaway;
+  readyOrders.value = ready;
 }
 
-async function refreshLists() {
-  await Promise.all([loadStaticData(), loadOpenOrders()]);
-}
-
-async function selectOrder(orderId) {
-  workspaceLoading.value = true;
+async function loadInitialData() {
+  loading.value = true;
   errorMessage.value = '';
 
   try {
-    const order = await api.order.getById(orderId);
-    activeOrder.value = order;
-    selectedOrderId.value = order.id;
-    selectedTableId.value = order.table_id || null;
+    await Promise.all([loadResources(), loadBoards()]);
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
-    activeOrder.value = null;
-    selectedOrderId.value = null;
   } finally {
-    workspaceLoading.value = false;
+    loading.value = false;
   }
 }
 
-async function selectDineInTable(table) {
+async function reloadActiveOrder() {
+  if (!activeOrder.value) {
+    return;
+  }
+
+  activeOrder.value = await api.order.getById(activeOrder.value.id);
+}
+
+async function refreshAfterMutation() {
+  await Promise.all([reloadActiveOrder(), loadBoards()]);
+}
+
+async function selectTable(tableId) {
   workspaceLoading.value = true;
   errorMessage.value = '';
+  activeMode.value = 'DINE_IN';
+  selectedTableId.value = tableId;
 
   try {
-    const order = await api.order.getOrCreateDineInByTableId(table.id);
-    selectedTableId.value = table.id;
-    activeOrder.value = order;
-    selectedOrderId.value = order.id;
-    await loadOpenOrders();
+    activeOrder.value = await api.order.getOrCreateDineInByTableId(tableId);
+    await loadBoards();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -451,14 +503,12 @@ async function selectDineInTable(table) {
 async function createTakeawayOrder() {
   actionLoading.value = true;
   errorMessage.value = '';
+  activeMode.value = 'TAKEAWAY';
+  selectedTableId.value = null;
 
   try {
-    const order = await api.order.createTakeawayOrder();
-    activeMode.value = 'TAKEAWAY';
-    activeOrder.value = order;
-    selectedOrderId.value = order.id;
-    selectedTableId.value = null;
-    await loadOpenOrders();
+    activeOrder.value = await api.order.createTakeawayOrder();
+    await loadBoards();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -466,16 +516,23 @@ async function createTakeawayOrder() {
   }
 }
 
-async function reloadActiveOrder() {
-  if (!selectedOrderId.value) {
-    return;
-  }
+async function openExistingOrder(orderId, tableId = null) {
+  workspaceLoading.value = true;
+  errorMessage.value = '';
+  selectedTableId.value = tableId;
+  activeMode.value = tableId ? 'DINE_IN' : 'TAKEAWAY';
 
-  await selectOrder(selectedOrderId.value);
+  try {
+    activeOrder.value = await api.order.getById(orderId);
+  } catch (error) {
+    errorMessage.value = mapErrorMessage(error);
+  } finally {
+    workspaceLoading.value = false;
+  }
 }
 
-async function addFood(food) {
-  if (!selectedOrderId.value) {
+async function addFood(foodId) {
+  if (!activeOrder.value) {
     return;
   }
 
@@ -483,12 +540,11 @@ async function addFood(food) {
   errorMessage.value = '';
 
   try {
-    const quantity = Number(foodQuantities.value[food.id] || 1);
-    activeOrder.value = await orderApi.addFoodItemToOrder(selectedOrderId.value, {
-      foodId: food.id,
-      quantity,
+    await api.order.addFoodItemToOrder(activeOrder.value.id, {
+      foodId,
+      quantity: 1,
     });
-    await loadOpenOrders();
+    await refreshAfterMutation();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -496,8 +552,8 @@ async function addFood(food) {
   }
 }
 
-async function addCombo(combo) {
-  if (!selectedOrderId.value) {
+async function addCombo(comboId) {
+  if (!activeOrder.value) {
     return;
   }
 
@@ -505,12 +561,11 @@ async function addCombo(combo) {
   errorMessage.value = '';
 
   try {
-    const quantity = Number(comboQuantities.value[combo.id] || 1);
-    activeOrder.value = await orderApi.addComboItemToOrder(selectedOrderId.value, {
-      comboId: combo.id,
-      quantity,
+    await api.order.addComboItemToOrder(activeOrder.value.id, {
+      comboId,
+      quantity: 1,
     });
-    await loadOpenOrders();
+    await refreshAfterMutation();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -518,8 +573,8 @@ async function addCombo(combo) {
   }
 }
 
-async function changeItemQuantity(item, event) {
-  if (!selectedOrderId.value) {
+async function changeQuantity(item, quantity) {
+  if (!activeOrder.value || quantity < 1) {
     return;
   }
 
@@ -527,19 +582,17 @@ async function changeItemQuantity(item, event) {
   errorMessage.value = '';
 
   try {
-    const quantity = Number(event.target.value);
-    activeOrder.value = await orderApi.updateItemQuantity(selectedOrderId.value, item.id, quantity);
-    await loadOpenOrders();
+    await api.order.updateItemQuantity(activeOrder.value.id, item.id, quantity);
+    await refreshAfterMutation();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
-    event.target.value = String(item.quantity);
   } finally {
     actionLoading.value = false;
   }
 }
 
-async function removeItem(item) {
-  if (!selectedOrderId.value) {
+async function removeItem(itemId) {
+  if (!activeOrder.value) {
     return;
   }
 
@@ -547,8 +600,8 @@ async function removeItem(item) {
   errorMessage.value = '';
 
   try {
-    activeOrder.value = await orderApi.removeItem(selectedOrderId.value, item.id);
-    await loadOpenOrders();
+    await api.order.removeItem(activeOrder.value.id, itemId);
+    await refreshAfterMutation();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -557,7 +610,7 @@ async function removeItem(item) {
 }
 
 async function markReady() {
-  if (!selectedOrderId.value) {
+  if (!activeOrder.value) {
     return;
   }
 
@@ -565,8 +618,16 @@ async function markReady() {
   errorMessage.value = '';
 
   try {
-    activeOrder.value = await orderApi.markReady(selectedOrderId.value);
-    await loadOpenOrders();
+    const readyOrderId = activeOrder.value.id;
+
+    await orderApi.markReady(readyOrderId);
+    activeOrder.value = null;
+    selectedTableId.value = null;
+    await loadBoards();
+
+    if (!clearedReadyOrderIds.value.includes(readyOrderId)) {
+      clearedReadyOrderIds.value = clearedReadyOrderIds.value.filter((id) => id !== readyOrderId);
+    }
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -575,7 +636,7 @@ async function markReady() {
 }
 
 async function cancelOrder() {
-  if (!selectedOrderId.value) {
+  if (!activeOrder.value) {
     return;
   }
 
@@ -583,8 +644,10 @@ async function cancelOrder() {
   errorMessage.value = '';
 
   try {
-    activeOrder.value = await orderApi.cancel(selectedOrderId.value);
-    await loadOpenOrders();
+    await api.order.cancel(activeOrder.value.id);
+    activeOrder.value = null;
+    selectedTableId.value = null;
+    await loadBoards();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
   } finally {
@@ -592,63 +655,41 @@ async function cancelOrder() {
   }
 }
 
-onMounted(async () => {
-  loading.value = true;
-  errorMessage.value = '';
-
-  try {
-    await refreshLists();
-  } catch (error) {
-    errorMessage.value = mapErrorMessage(error);
-  } finally {
-    loading.value = false;
-  }
+onMounted(() => {
+  loadInitialData();
 });
 </script>
 
 <style scoped>
-.error-text {
-  padding: var(--space-3);
-  border: 1px solid #fecaca;
-  border-radius: var(--radius-1);
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.state-text {
-  color: var(--color-text-muted);
-}
-
-.mode-switch {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.orders-layout {
+.page-layout {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: var(--space-3);
 }
 
-.sidebar-stack,
-.workspace-stack {
+.left-column,
+.right-column {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.workspace-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.section-head {
+.top-controls,
+.section-header,
+.order-summary,
+.board-footer {
   display: flex;
-  align-items: center;
+  align-items: start;
   justify-content: space-between;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+}
+
+.mode-actions,
+.item-actions,
+.final-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .section-title {
@@ -657,28 +698,48 @@ onMounted(async () => {
   color: var(--color-text);
 }
 
-.section-meta {
+.error-text {
+  padding: var(--space-3);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-1);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.state-text,
+.board-text,
+.summary-label,
+.summary-line {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
 .table-grid,
-.takeaway-list,
-.product-list,
-.order-items {
-  display: flex;
-  flex-direction: column;
+.board-grid,
+.ready-grid,
+.product-grid,
+.items-list,
+.workspace-grid {
+  display: grid;
   gap: var(--space-2);
 }
 
-.table-tile,
-.takeaway-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: start;
-  width: 100%;
-  padding: var(--space-3);
+.table-grid {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
+.board-grid,
+.ready-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.workspace-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.table-tile {
+  min-height: 58px;
+  padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-bg-surface-soft);
@@ -686,145 +747,95 @@ onMounted(async () => {
   text-align: left;
 }
 
-.table-tile--selected,
-.takeaway-tile--selected {
+.table-tile--selected {
   border-color: var(--color-primary);
   background: #eff6ff;
 }
 
 .table-tile--busy {
-  background: #f8fafc;
+  background: #eefbf3;
 }
 
-.table-name,
-.takeaway-title,
-.product-name {
-  font-weight: 700;
+.table-tile__title,
+.board-title,
+.product-title {
   color: var(--color-text);
-}
-
-.table-note,
-.takeaway-note,
-.product-meta,
-.summary-text {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.summary-head {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.summary-title {
-  font-size: var(--font-size-lg);
   font-weight: 700;
-  color: var(--color-text);
 }
 
-.summary-badges {
+.board-card,
+.product-card,
+.item-row,
+.summary-pill {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-}
-
-.summary-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.status-badge,
-.total-badge {
-  padding: 4px 8px;
-  border-radius: var(--radius-1);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-}
-
-.status-badge--open {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.status-badge--ready {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge--cancelled {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.total-badge {
-  background: #f3f4f6;
-  color: var(--color-text);
-}
-
-.product-row,
-.order-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-bg-surface-soft);
 }
 
-.inline-actions {
+.board-card--ready {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.board-info {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.product-price,
+.quantity-badge {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.summary-boxes,
+.final-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.qty-input {
-  width: 72px;
-  min-height: 42px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-bg-surface);
-  color: var(--color-text);
+.item-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.item-total {
-  min-width: 96px;
-  text-align: right;
-  font-weight: 700;
-  color: var(--color-text);
+.item-info {
+  min-width: 0;
 }
 
-@media (max-width: 1100px) {
-  .orders-layout,
+.quantity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+}
+
+@media (max-width: 1180px) {
+  .page-layout,
   .workspace-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .summary-head,
-  .section-head,
-  .summary-actions,
-  .product-row,
-  .order-item,
-  .inline-actions {
-    grid-template-columns: 1fr;
+  .top-controls,
+  .section-header,
+  .order-summary,
+  .board-footer,
+  .item-row {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .summary-badges {
-    flex-wrap: wrap;
-  }
-
-  .item-total {
-    min-width: 0;
-    text-align: left;
   }
 }
 </style>

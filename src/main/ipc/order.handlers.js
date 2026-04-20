@@ -53,6 +53,10 @@ function registerOrderHandlers() {
   ipcMain.handle('order:listRecentOrders', (_event, limit) => {
     return service.listRecentOrders(limit);
   });
+
+  ipcMain.handle('order:listReadyOrders', (_event, limit) => {
+    return service.listReadyOrders(limit);
+  });
 }
 
 module.exports = {

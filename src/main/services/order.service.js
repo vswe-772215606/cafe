@@ -89,6 +89,16 @@ function listRecentOrders(limit) {
   return orderRepo.listRecentOrders(limit);
 }
 
+function listReadyOrders(limit) {
+  limit = Number(limit);
+
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error('INVALID_LIMIT');
+  }
+
+  return orderRepo.listReadyOrders(limit);
+}
+
 function addFoodItemToOrder(orderId, { foodId, quantity }) {
   orderId = Number(orderId);
   foodId = Number(foodId);
@@ -348,4 +358,5 @@ module.exports = {
   listOpenDineInOrders,
   listOpenTakeawayOrders,
   listRecentOrders,
+  listReadyOrders,
 };

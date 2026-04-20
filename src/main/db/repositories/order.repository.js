@@ -106,6 +106,17 @@ function listRecentOrders(limit) {
   return statement.all(limit);
 }
 
+function listReadyOrders(limit) {
+  const statement = db.prepare(`
+    ${SELECT_ORDERS_SQL}
+    WHERE orders.status = 'READY'
+    ORDER BY orders.closed_at DESC
+    LIMIT ?
+  `);
+
+  return statement.all(limit);
+}
+
 function create({ tableId, orderType }) {
   const now = new Date().toISOString();
 
@@ -238,6 +249,7 @@ module.exports = {
   listOpenDineInOrders,
   listOpenTakeawayOrders,
   listRecentOrders,
+  listReadyOrders,
   create,
   addItem,
   updateItemQuantity,
