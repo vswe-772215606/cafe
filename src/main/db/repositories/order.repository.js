@@ -4,6 +4,7 @@ const SELECT_ORDERS_SQL = `
   SELECT
     orders.id AS id,
     orders.table_id AS table_id,
+    tables.number AS table_number,
     orders.order_type AS order_type,
     orders.status AS status,
     orders.total_price AS total_price,
@@ -11,6 +12,7 @@ const SELECT_ORDERS_SQL = `
     orders.updated_at AS updated_at,
     orders.closed_at AS closed_at
   FROM orders
+  LEFT JOIN tables ON tables.id = orders.table_id
 `;
 
 const SELECT_ORDER_ITEMS_SQL = `
@@ -70,6 +72,38 @@ function getOpenDineInByTableId(tableId) {
   `);
 
   return statement.get(tableId);
+}
+
+function listOpenDineInOrders() {
+  const statement = db.prepare(`
+    ${SELECT_ORDERS_SQL}
+    WHERE orders.order_type = 'DINE_IN'
+      AND orders.status = 'OPEN'
+    ORDER BY orders.created_at ASC
+  `);
+
+  return statement.all();
+}
+
+function listOpenTakeawayOrders() {
+  const statement = db.prepare(`
+    ${SELECT_ORDERS_SQL}
+    WHERE orders.order_type = 'TAKEAWAY'
+      AND orders.status = 'OPEN'
+    ORDER BY orders.created_at ASC
+  `);
+
+  return statement.all();
+}
+
+function listRecentOrders(limit) {
+  const statement = db.prepare(`
+    ${SELECT_ORDERS_SQL}
+    ORDER BY orders.created_at DESC
+    LIMIT ?
+  `);
+
+  return statement.all(limit);
 }
 
 function create({ tableId, orderType }) {
@@ -201,6 +235,9 @@ module.exports = {
   getItemsByOrderId,
   getByIdWithItems,
   getOpenDineInByTableId,
+  listOpenDineInOrders,
+  listOpenTakeawayOrders,
+  listRecentOrders,
   create,
   addItem,
   updateItemQuantity,

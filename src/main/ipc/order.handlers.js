@@ -34,12 +34,24 @@ function registerOrderHandlers() {
     return service.removeItem(orderId, itemId);
   });
 
-  ipcMain.handle('order:close', (_event, orderId) => {
-    return service.close(orderId);
+  ipcMain.handle('order:markReady', (_event, orderId) => {
+    return service.markReady(orderId);
   });
 
   ipcMain.handle('order:cancel', (_event, orderId) => {
     return service.cancel(orderId);
+  });
+
+  ipcMain.handle('order:listOpenDineInOrders', () => {
+    return service.listOpenDineInOrders();
+  });
+
+  ipcMain.handle('order:listOpenTakeawayOrders', () => {
+    return service.listOpenTakeawayOrders();
+  });
+
+  ipcMain.handle('order:listRecentOrders', (_event, limit) => {
+    return service.listRecentOrders(limit);
   });
 }
 

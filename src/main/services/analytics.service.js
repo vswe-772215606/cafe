@@ -49,6 +49,12 @@ function getSalesByTable({ fromDate, toDate }) {
   return repo.getSalesByTable(fromDate, toDate);
 }
 
+function getSalesByOrderType({ fromDate, toDate }) {
+  validateDateRange({ fromDate, toDate });
+
+  return repo.getSalesByOrderType(fromDate, toDate);
+}
+
 function getRecentCompletedOrders(limit) {
   limit = validateLimit(limit);
 
@@ -60,5 +66,6 @@ module.exports = {
   getTopItems,
   getSalesByType,
   getSalesByTable,
+  getSalesByOrderType,
   getRecentCompletedOrders,
 };

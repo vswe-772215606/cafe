@@ -6,14 +6,14 @@ function getSummary(fromDate, toDate) {
       COALESCE((
         SELECT SUM(orders.total_price)
         FROM orders
-        WHERE orders.status = 'DONE'
+        WHERE orders.status = 'READY'
           AND orders.closed_at >= ?
           AND orders.closed_at <= ?
       ), 0) AS total_sales,
       COALESCE((
         SELECT COUNT(*)
         FROM orders
-        WHERE orders.status = 'DONE'
+        WHERE orders.status = 'READY'
           AND orders.closed_at >= ?
           AND orders.closed_at <= ?
       ), 0) AS completed_orders_count,
@@ -21,7 +21,7 @@ function getSummary(fromDate, toDate) {
         SELECT SUM(order_items.quantity)
         FROM order_items
         INNER JOIN orders ON orders.id = order_items.order_id
-        WHERE orders.status = 'DONE'
+        WHERE orders.status = 'READY'
           AND orders.closed_at >= ?
           AND orders.closed_at <= ?
       ), 0) AS total_items_sold
@@ -39,7 +39,7 @@ function getTopItems(fromDate, toDate, limit) {
       SUM(order_items.total_price) AS total_sales
     FROM order_items
     INNER JOIN orders ON orders.id = order_items.order_id
-    WHERE orders.status = 'DONE'
+    WHERE orders.status = 'READY'
       AND orders.closed_at >= ?
       AND orders.closed_at <= ?
     GROUP BY order_items.item_name, order_items.type
@@ -58,7 +58,7 @@ function getSalesByType(fromDate, toDate) {
       SUM(order_items.total_price) AS total_sales
     FROM order_items
     INNER JOIN orders ON orders.id = order_items.order_id
-    WHERE orders.status = 'DONE'
+    WHERE orders.status = 'READY'
       AND orders.closed_at >= ?
       AND orders.closed_at <= ?
     GROUP BY order_items.type
@@ -77,11 +77,28 @@ function getSalesByTable(fromDate, toDate) {
       SUM(orders.total_price) AS total_sales
     FROM orders
     INNER JOIN tables ON tables.id = orders.table_id
-    WHERE orders.status = 'DONE'
+    WHERE orders.status = 'READY'
       AND orders.closed_at >= ?
       AND orders.closed_at <= ?
     GROUP BY orders.table_id, tables.number
     ORDER BY total_sales DESC, table_number ASC
+  `);
+
+  return statement.all(fromDate, toDate);
+}
+
+function getSalesByOrderType(fromDate, toDate) {
+  const statement = db.prepare(`
+    SELECT
+      orders.order_type AS order_type,
+      COUNT(*) AS orders_count,
+      SUM(orders.total_price) AS total_sales
+    FROM orders
+    WHERE orders.status = 'READY'
+      AND orders.closed_at >= ?
+      AND orders.closed_at <= ?
+    GROUP BY orders.order_type
+    ORDER BY orders.order_type ASC
   `);
 
   return statement.all(fromDate, toDate);
@@ -95,7 +112,7 @@ function getRecentCompletedOrders(limit) {
       orders.total_price AS total_price,
       orders.closed_at AS closed_at
     FROM orders
-    WHERE orders.status = 'DONE'
+    WHERE orders.status = 'READY'
     ORDER BY orders.closed_at DESC
     LIMIT ?
   `);
@@ -108,5 +125,6 @@ module.exports = {
   getTopItems,
   getSalesByType,
   getSalesByTable,
+  getSalesByOrderType,
   getRecentCompletedOrders,
 };

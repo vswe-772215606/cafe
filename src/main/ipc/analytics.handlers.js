@@ -18,6 +18,10 @@ function registerAnalyticsHandlers() {
     return service.getSalesByTable(payload);
   });
 
+  ipcMain.handle('analytics:getSalesByOrderType', (_event, payload) => {
+    return service.getSalesByOrderType(payload);
+  });
+
   ipcMain.handle('analytics:getRecentCompletedOrders', (_event, limit) => {
     return service.getRecentCompletedOrders(limit);
   });

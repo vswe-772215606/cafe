@@ -71,6 +71,24 @@ function createTakeawayOrder() {
   return orderRepo.getByIdWithItems(createdOrder.id);
 }
 
+function listOpenDineInOrders() {
+  return orderRepo.listOpenDineInOrders();
+}
+
+function listOpenTakeawayOrders() {
+  return orderRepo.listOpenTakeawayOrders();
+}
+
+function listRecentOrders(limit) {
+  limit = Number(limit);
+
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error('INVALID_LIMIT');
+  }
+
+  return orderRepo.listRecentOrders(limit);
+}
+
 function addFoodItemToOrder(orderId, { foodId, quantity }) {
   orderId = Number(orderId);
   foodId = Number(foodId);
@@ -264,7 +282,7 @@ function removeItem(orderId, itemId) {
   return orderRepo.getByIdWithItems(orderId);
 }
 
-function close(orderId) {
+function markReady(orderId) {
   orderId = Number(orderId);
 
   if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -287,7 +305,7 @@ function close(orderId) {
 
   const closedAt = new Date().toISOString();
 
-  orderRepo.setStatus(orderId, 'DONE', closedAt);
+  orderRepo.setStatus(orderId, 'READY', closedAt);
 
   return orderRepo.getByIdWithItems(orderId);
 }
@@ -325,6 +343,9 @@ module.exports = {
   addComboItemToOrder,
   updateItemQuantity,
   removeItem,
-  close,
+  markReady,
   cancel,
+  listOpenDineInOrders,
+  listOpenTakeawayOrders,
+  listRecentOrders,
 };

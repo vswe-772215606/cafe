@@ -41,14 +41,18 @@ contextBridge.exposeInMainWorld('api', {
     updateItemQuantity: (orderId, itemId, quantity) =>
       ipcRenderer.invoke('order:updateItemQuantity', { orderId, itemId, quantity }),
     removeItem: (orderId, itemId) => ipcRenderer.invoke('order:removeItem', { orderId, itemId }),
-    close: (orderId) => ipcRenderer.invoke('order:close', orderId),
+    markReady: (orderId) => ipcRenderer.invoke('order:markReady', orderId),
     cancel: (orderId) => ipcRenderer.invoke('order:cancel', orderId),
+    listOpenDineInOrders: () => ipcRenderer.invoke('order:listOpenDineInOrders'),
+    listOpenTakeawayOrders: () => ipcRenderer.invoke('order:listOpenTakeawayOrders'),
+    listRecentOrders: (limit) => ipcRenderer.invoke('order:listRecentOrders', limit),
   },
   analytics: {
     getSummary: (payload) => ipcRenderer.invoke('analytics:getSummary', payload),
     getTopItems: (payload) => ipcRenderer.invoke('analytics:getTopItems', payload),
     getSalesByType: (payload) => ipcRenderer.invoke('analytics:getSalesByType', payload),
     getSalesByTable: (payload) => ipcRenderer.invoke('analytics:getSalesByTable', payload),
+    getSalesByOrderType: (payload) => ipcRenderer.invoke('analytics:getSalesByOrderType', payload),
     getRecentCompletedOrders: (limit) => ipcRenderer.invoke('analytics:getRecentCompletedOrders', limit),
   },
 });
