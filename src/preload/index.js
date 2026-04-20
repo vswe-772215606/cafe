@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('api', {
     create: (payload) => ipcRenderer.invoke('food:create', payload),
     update: (id, data) => ipcRenderer.invoke('food:update', { id, data }),
     setActive: (id, isActive) => ipcRenderer.invoke('food:setActive', { id, isActive }),
+    delete: (id) => ipcRenderer.invoke('food:delete', id),
   },
   table: {
     getAll: () => ipcRenderer.invoke('table:getAll'),

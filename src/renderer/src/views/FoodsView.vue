@@ -270,6 +270,8 @@ function mapErrorMessage(error) {
       return 'Menyu noto‘g‘ri tanlangan.';
     case 'FOOD_NOT_FOUND':
       return 'Taom topilmadi.';
+    case 'FOOD_DELETE_FAILED':
+      return 'Bu taomni o‘chirib bo‘lmaydi. Avval unga bog‘langan buyurtma yoki combo ma’lumotlarini tekshiring.';
     default:
       return 'Xatolik yuz berdi.';
   }
@@ -396,7 +398,7 @@ async function deleteFood() {
   submitting.value = true;
 
   try {
-    await api.food.setActive(selectedFood.value.id, false);
+    await api.food.delete(selectedFood.value.id);
     closeModal();
     await loadFoods();
   } catch (error) {

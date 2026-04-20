@@ -25,6 +25,10 @@ function registerFoodHandlers() {
   ipcMain.handle('food:setActive', (_event, { id, isActive }) => {
     return service.setActive(id, isActive);
   });
+
+  ipcMain.handle('food:delete', (_event, id) => {
+    return service.deleteById(id);
+  });
 }
 
 module.exports = {

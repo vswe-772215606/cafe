@@ -129,6 +129,32 @@ function setActive(id, isActive) {
   return foodRepo.setActive(id, isActive);
 }
 
+function deleteById(id) {
+  id = Number(id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error('INVALID_ID');
+  }
+
+  const food = foodRepo.getById(id);
+
+  if (!food) {
+    throw new Error('FOOD_NOT_FOUND');
+  }
+
+  if (foodRepo.isUsedInCombos(id) || foodRepo.isUsedInOrders(id)) {
+    throw new Error('FOOD_DELETE_FAILED');
+  }
+
+  const deleted = foodRepo.deleteById(id);
+
+  if (!deleted) {
+    throw new Error('FOOD_DELETE_FAILED');
+  }
+
+  return true;
+}
+
 module.exports = {
   getAll,
   getById,
@@ -136,4 +162,5 @@ module.exports = {
   create,
   update,
   setActive,
+  deleteById,
 };

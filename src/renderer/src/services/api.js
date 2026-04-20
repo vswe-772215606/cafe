@@ -13,6 +13,7 @@ export const api = {
     create: (data) => window.api.food.create(data),
     update: (id, data) => window.api.food.update(id, data),
     setActive: (id, isActive) => window.api.food.setActive(id, isActive),
+    delete: (id) => window.api.food.delete(id),
   },
 
   table: {
