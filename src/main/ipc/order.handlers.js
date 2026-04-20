@@ -1,5 +1,6 @@
 const { ipcMain } = require('electron');
 const service = require('../services/order.service');
+const printService = require('../services/order-print.service');
 
 function registerOrderHandlers() {
   ipcMain.handle('order:getById', (_event, id) => {
@@ -56,6 +57,10 @@ function registerOrderHandlers() {
 
   ipcMain.handle('order:listReadyOrders', (_event, limit) => {
     return service.listReadyOrders(limit);
+  });
+
+  ipcMain.handle('order:printReceipt', (_event, orderId) => {
+    return printService.printOrderReceipt(orderId);
   });
 }
 

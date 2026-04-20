@@ -5,6 +5,7 @@ import TablesView from '../views/TablesView.vue';
 import CombosView from '../views/CombosView.vue';
 import OrdersView from '../views/OrdersView.vue';
 import AnalyticsView from '../views/AnalyticsView.vue';
+import SettingsView from '../views/SettingsView.vue';
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -36,6 +37,10 @@ const router = createRouter({
     {
       path: '/analytics',
       component: AnalyticsView,
+    },
+    {
+      path: '/settings',
+      component: SettingsView,
     },
   ],
 });

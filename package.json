@@ -32,7 +32,8 @@
     "better-sqlite3": "^12.9.0",
     "lucide-vue-next": "^0.511.0",
     "vue": "^3.5.32",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "xlsx": "^0.18.5"
   },
   "build": {
     "appId": "com.vswe772215606.cafe",
@@ -45,6 +46,15 @@
       "src/main/**/*",
       "src/preload/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/bin",
+        "to": "bin",
+        "filter": [
+          "receipt.exe"
+        ]
+      }
     ],
     "win": {
       "target": [

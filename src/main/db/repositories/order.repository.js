@@ -179,6 +179,30 @@ function addItem({
   return getItemByIdStatement.get(result.lastInsertRowid);
 }
 
+function findExistingFoodItem(orderId, foodId) {
+  const statement = db.prepare(`
+    ${SELECT_ORDER_ITEMS_SQL}
+    WHERE order_items.order_id = ?
+      AND order_items.type = 'FOOD'
+      AND order_items.food_id = ?
+    LIMIT 1
+  `);
+
+  return statement.get(orderId, foodId);
+}
+
+function findExistingComboItem(orderId, comboId) {
+  const statement = db.prepare(`
+    ${SELECT_ORDER_ITEMS_SQL}
+    WHERE order_items.order_id = ?
+      AND order_items.type = 'COMBO'
+      AND order_items.combo_id = ?
+    LIMIT 1
+  `);
+
+  return statement.get(orderId, comboId);
+}
+
 function updateItemQuantity(itemId, quantity, totalPrice) {
   const now = new Date().toISOString();
 
@@ -252,6 +276,8 @@ module.exports = {
   listReadyOrders,
   create,
   addItem,
+  findExistingFoodItem,
+  findExistingComboItem,
   updateItemQuantity,
   deleteItem,
   updateTotal,

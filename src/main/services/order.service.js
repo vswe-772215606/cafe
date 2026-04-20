@@ -136,16 +136,25 @@ function addFoodItemToOrder(orderId, { foodId, quantity }) {
     throw new Error('FOOD_INACTIVE');
   }
 
-  orderRepo.addItem({
-    orderId: order.id,
-    type: 'FOOD',
-    foodId: food.id,
-    comboId: null,
-    itemName: food.name,
-    unitPrice: food.price,
-    quantity,
-    totalPrice: food.price * quantity,
-  });
+  const existingItem = orderRepo.findExistingFoodItem(order.id, food.id);
+
+  if (existingItem) {
+    const newQuantity = existingItem.quantity + quantity;
+    const newTotalPrice = existingItem.unit_price * newQuantity;
+
+    orderRepo.updateItemQuantity(existingItem.id, newQuantity, newTotalPrice);
+  } else {
+    orderRepo.addItem({
+      orderId: order.id,
+      type: 'FOOD',
+      foodId: food.id,
+      comboId: null,
+      itemName: food.name,
+      unitPrice: food.price,
+      quantity,
+      totalPrice: food.price * quantity,
+    });
+  }
 
   const updatedOrder = orderRepo.getByIdWithItems(order.id);
   const totalPrice = updatedOrder.items.reduce((sum, item) => sum + item.total_price, 0);
@@ -192,16 +201,25 @@ function addComboItemToOrder(orderId, { comboId, quantity }) {
     throw new Error('COMBO_INACTIVE');
   }
 
-  orderRepo.addItem({
-    orderId: order.id,
-    type: 'COMBO',
-    foodId: null,
-    comboId: combo.id,
-    itemName: combo.name,
-    unitPrice: combo.price,
-    quantity,
-    totalPrice: combo.price * quantity,
-  });
+  const existingItem = orderRepo.findExistingComboItem(order.id, combo.id);
+
+  if (existingItem) {
+    const newQuantity = existingItem.quantity + quantity;
+    const newTotalPrice = existingItem.unit_price * newQuantity;
+
+    orderRepo.updateItemQuantity(existingItem.id, newQuantity, newTotalPrice);
+  } else {
+    orderRepo.addItem({
+      orderId: order.id,
+      type: 'COMBO',
+      foodId: null,
+      comboId: combo.id,
+      itemName: combo.name,
+      unitPrice: combo.price,
+      quantity,
+      totalPrice: combo.price * quantity,
+    });
+  }
 
   const updatedOrder = orderRepo.getByIdWithItems(order.id);
   const totalPrice = updatedOrder.items.reduce((sum, item) => sum + item.total_price, 0);

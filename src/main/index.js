@@ -9,6 +9,7 @@ const { registerTableHandlers } = require('./ipc/table.handlers');
 const { registerComboHandlers } = require('./ipc/combo.handlers');
 const { registerOrderHandlers } = require('./ipc/order.handlers');
 const { registerAnalyticsHandlers } = require('./ipc/analytics.handlers');
+const { registerSettingsHandlers } = require('./ipc/settings.handlers');
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -39,6 +40,7 @@ app.whenReady().then(() => {
   registerComboHandlers();
   registerOrderHandlers();
   registerAnalyticsHandlers();
+  registerSettingsHandlers();
 
   createMainWindow();
 

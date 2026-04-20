@@ -47,6 +47,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ReceiptText,
+  Settings,
   TableProperties,
   UtensilsCrossed,
 } from 'lucide-vue-next';
@@ -60,6 +61,7 @@ const navItems = [
   { to: '/combos', label: 'Combo', icon: Package },
   { to: '/orders', label: 'Buyurtmalar', icon: ReceiptText },
   { to: '/analytics', label: 'Hisobotlar', icon: BarChart3 },
+  { to: '/settings', label: 'Sozlamalar', icon: Settings },
 ];
 </script>
 

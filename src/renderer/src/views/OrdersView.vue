@@ -1,26 +1,29 @@
 <template>
   <BasePage>
-    <BaseSectionHeader title="Buyurtmalar" />
-
-    <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+    <div class="page-head">
+      <h1 class="page-title">Buyurtmalar</h1>
+      <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+    </div>
 
     <div class="page-layout">
       <div class="left-column">
         <BaseCard>
-          <div class="top-controls">
-            <div class="mode-actions">
-              <BaseButton
-                :variant="activeMode === 'DINE_IN' ? 'primary' : 'secondary'"
+          <div class="source-row">
+            <div class="mode-switch">
+              <button
+                type="button"
+                :class="['mode-btn', activeMode === 'DINE_IN' ? 'mode-btn--active' : '']"
                 @click="activeMode = 'DINE_IN'"
               >
                 Zalda
-              </BaseButton>
-              <BaseButton
-                :variant="activeMode === 'TAKEAWAY' ? 'primary' : 'secondary'"
+              </button>
+              <button
+                type="button"
+                :class="['mode-btn', activeMode === 'TAKEAWAY' ? 'mode-btn--active' : '']"
                 @click="activeMode = 'TAKEAWAY'"
               >
                 Olib ketish
-              </BaseButton>
+              </button>
             </div>
 
             <BaseButton
@@ -50,6 +53,7 @@
               @click="selectTable(table.id)"
             >
               <span class="table-tile__title">Stol #{{ table.number }}</span>
+              <span v-if="openDineInMap[table.id]" class="table-tile__dot" />
             </button>
           </div>
         </BaseCard>
@@ -57,6 +61,7 @@
         <BaseCard>
           <div class="section-header">
             <h3 class="section-title">Ochiq zal buyurtmalari</h3>
+            <span class="count-pill">{{ openDineInOrders.length }}</span>
           </div>
 
           <BaseEmptyState
@@ -64,29 +69,28 @@
             message="Hozircha ochiq zal buyurtmalari yo‘q."
           />
 
-          <div v-else class="board-grid">
-            <div
+          <div v-else class="board-list">
+            <button
               v-for="order in openDineInOrders"
               :key="order.id"
-              class="board-card"
+              type="button"
+              :class="[
+                'board-row',
+                activeOrder && activeOrder.id === order.id ? 'board-row--active' : '',
+              ]"
+              @click="openExistingOrder(order.id, order.table_id)"
             >
-              <div class="board-info">
-                <p class="board-title">#{{ order.id }}</p>
-                <p class="board-text">Stol #{{ order.table_number }}</p>
-              </div>
-              <div class="board-footer">
-                <strong>{{ formatPrice(order.total_price) }}</strong>
-                <BaseButton variant="secondary" @click="openExistingOrder(order.id, order.table_id)">
-                  Ochish
-                </BaseButton>
-              </div>
-            </div>
+              <span class="board-row__id">#{{ order.id }}</span>
+              <span class="board-row__mid">Stol #{{ order.table_number }}</span>
+              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
+            </button>
           </div>
         </BaseCard>
 
         <BaseCard>
           <div class="section-header">
             <h3 class="section-title">Ochiq olib ketish buyurtmalari</h3>
+            <span class="count-pill">{{ openTakeawayOrders.length }}</span>
           </div>
 
           <BaseEmptyState
@@ -94,36 +98,46 @@
             message="Hozircha ochiq olib ketish buyurtmalari yo‘q."
           />
 
-          <div v-else class="board-grid">
-            <div
+          <div v-else class="board-list">
+            <button
               v-for="order in openTakeawayOrders"
               :key="order.id"
-              class="board-card"
+              type="button"
+              :class="[
+                'board-row',
+                activeOrder && activeOrder.id === order.id ? 'board-row--active' : '',
+              ]"
+              @click="openExistingOrder(order.id)"
             >
-              <div class="board-info">
-                <p class="board-title">#{{ order.id }}</p>
-                <p class="board-text">Olib ketish</p>
-              </div>
-              <div class="board-footer">
-                <strong>{{ formatPrice(order.total_price) }}</strong>
-                <BaseButton variant="secondary" @click="openExistingOrder(order.id)">
-                  Ochish
-                </BaseButton>
-              </div>
-            </div>
+              <span class="board-row__id">#{{ order.id }}</span>
+              <span class="board-row__mid">Olib ketish</span>
+              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
+            </button>
           </div>
         </BaseCard>
 
         <BaseCard>
           <div class="section-header">
             <h3 class="section-title">Tayyor buyurtmalar</h3>
-            <BaseButton
-              variant="ghost"
-              :disabled="displayedReadyOrders.length === 0"
-              @click="clearAllReadyOrders"
-            >
-              Barchasini tozalash
-            </BaseButton>
+            <div class="header-tools">
+              <span class="count-pill">{{ displayedReadyOrders.length }}</span>
+              <button
+                type="button"
+                class="link-btn"
+                :disabled="clearedReadyOrderIds.length === 0"
+                @click="restoreClearedReadyOrders"
+              >
+                Tozalanganlarni ko‘rsatish
+              </button>
+              <button
+                type="button"
+                class="link-btn"
+                :disabled="displayedReadyOrders.length === 0"
+                @click="clearAllReadyOrders"
+              >
+                Barchasini tozalash
+              </button>
+            </div>
           </div>
 
           <BaseEmptyState
@@ -131,128 +145,123 @@
             message="Hozircha tayyor buyurtmalar yo‘q."
           />
 
-          <div v-else class="ready-grid">
+          <div v-else class="board-list">
             <div
               v-for="order in displayedReadyOrders"
               :key="order.id"
-              class="board-card board-card--ready"
+              class="board-row board-row--ready"
             >
-              <div class="board-info">
-                <p class="board-title">#{{ order.id }}</p>
-                <p class="board-text">
-                  {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
-                  <span v-if="order.table_number">• Stol #{{ order.table_number }}</span>
-                </p>
-                <p class="board-text">{{ formatTime(order.closed_at) }}</p>
-              </div>
-
-              <div class="board-footer">
-                <strong>{{ formatPrice(order.total_price) }}</strong>
-                <BaseButton variant="ghost" @click="clearReadyOrder(order.id)">
-                  Tozalash
-                </BaseButton>
-              </div>
+              <span class="board-row__id">#{{ order.id }}</span>
+              <span class="board-row__mid">
+                {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
+                <template v-if="order.table_number">• Stol #{{ order.table_number }}</template>
+              </span>
+              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
+              <button
+                type="button"
+                class="icon-btn"
+                :disabled="printingOrderId === order.id"
+                aria-label="Chek chiqarish"
+                title="Chek chiqarish"
+                @click="printReceipt(order.id)"
+              >
+                <Printer />
+              </button>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Tozalash"
+                @click="clearReadyOrder(order.id)"
+              >
+                <X />
+              </button>
             </div>
           </div>
         </BaseCard>
       </div>
 
       <div class="right-column">
-        <BaseCard v-if="workspaceLoading">
+        <BaseCard v-if="workspaceLoading" class="workspace-empty">
           <p class="state-text">Yuklanmoqda...</p>
         </BaseCard>
 
-        <BaseEmptyState
-          v-else-if="!activeOrder"
-          message="Buyurtma tanlanmagan."
-        />
+        <BaseCard v-else-if="!activeOrder" class="workspace-empty">
+          <p class="state-text">Buyurtma tanlanmagan.</p>
+        </BaseCard>
 
-        <template v-else>
-          <BaseCard>
-            <div class="order-summary">
-              <div>
-                <h3 class="section-title">Buyurtma #{{ activeOrder.id }}</h3>
-                <p class="summary-line">
-                  {{ activeOrder.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
-                  <span v-if="activeOrder.table_number">• Stol #{{ activeOrder.table_number }}</span>
-                </p>
-              </div>
-
-              <div class="summary-meta">
-                <div class="summary-pill">
-                  <span class="summary-label">Holati</span>
-                  <strong>{{ orderStatusText(activeOrder.status) }}</strong>
-                </div>
-                <div class="summary-pill">
-                  <span class="summary-label">Jami</span>
-                  <strong>{{ formatPrice(activeOrder.total_price) }}</strong>
-                </div>
-              </div>
+        <BaseCard v-else class="workspace">
+          <div class="workspace-head">
+            <div class="workspace-head__left">
+              <h3 class="workspace-title">Buyurtma #{{ activeOrder.id }}</h3>
+              <span class="workspace-sub">
+                {{ activeOrder.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
+                <template v-if="activeOrder.table_number">• Stol #{{ activeOrder.table_number }}</template>
+              </span>
             </div>
-          </BaseCard>
-
-          <div class="workspace-grid">
-            <BaseCard>
-              <div class="section-header">
-                <h3 class="section-title">Taomlar</h3>
-              </div>
-
-              <div v-if="activeFoods.length === 0" class="state-text">Yuklanmoqda...</div>
-
-              <div v-else class="product-grid">
-                <div v-for="food in activeFoods" :key="food.id" class="product-card">
-                  <div>
-                    <p class="product-title">{{ food.name }}</p>
-                    <p class="product-price">{{ formatPrice(food.price) }}</p>
-                  </div>
-                  <BaseButton
-                    :disabled="!isOrderOpen || actionLoading"
-                    @click="addFood(food.id)"
-                  >
-                    <template #icon>
-                      <Plus />
-                    </template>
-                    Qo‘shish
-                  </BaseButton>
-                </div>
-              </div>
-            </BaseCard>
-
-            <BaseCard>
-              <div class="section-header">
-                <h3 class="section-title">Combo</h3>
-              </div>
-
-              <div v-if="activeCombos.length === 0" class="state-text">Yuklanmoqda...</div>
-
-              <div v-else class="product-grid">
-                <div v-for="combo in activeCombos" :key="combo.id" class="product-card">
-                  <div>
-                    <p class="product-title">{{ combo.name }}</p>
-                    <p class="product-price">{{ formatPrice(combo.price) }}</p>
-                  </div>
-                  <BaseButton
-                    :disabled="!isOrderOpen || actionLoading"
-                    @click="addCombo(combo.id)"
-                  >
-                    <template #icon>
-                      <Plus />
-                    </template>
-                    Qo‘shish
-                  </BaseButton>
-                </div>
-              </div>
-            </BaseCard>
+            <div class="workspace-head__right">
+              <span :class="['status-chip', `status-chip--${activeOrder.status.toLowerCase()}`]">
+                {{ orderStatusText(activeOrder.status) }}
+              </span>
+              <strong class="workspace-total">{{ formatPrice(activeOrder.total_price) }}</strong>
+            </div>
           </div>
 
-          <BaseCard>
+          <div class="catalog">
+            <div class="tab-row">
+              <button
+                type="button"
+                :class="['tab-btn', catalogTab === 'foods' ? 'tab-btn--active' : '']"
+                @click="catalogTab = 'foods'"
+              >
+                Taomlar
+              </button>
+              <button
+                type="button"
+                :class="['tab-btn', catalogTab === 'combos' ? 'tab-btn--active' : '']"
+                @click="catalogTab = 'combos'"
+              >
+                Combo
+              </button>
+            </div>
+
+            <div v-if="catalogTab === 'foods'" class="catalog-grid">
+              <button
+                v-for="food in activeFoods"
+                :key="food.id"
+                type="button"
+                class="catalog-tile"
+                :disabled="!isOrderOpen || actionLoading"
+                @click="addFood(food.id)"
+              >
+                <span class="catalog-tile__title">{{ food.name }}</span>
+                <span class="catalog-tile__price">{{ formatPrice(food.price) }}</span>
+              </button>
+            </div>
+
+            <div v-else class="catalog-grid">
+              <button
+                v-for="combo in activeCombos"
+                :key="combo.id"
+                type="button"
+                class="catalog-tile"
+                :disabled="!isOrderOpen || actionLoading"
+                @click="addCombo(combo.id)"
+              >
+                <span class="catalog-tile__title">{{ combo.name }}</span>
+                <span class="catalog-tile__price">{{ formatPrice(combo.price) }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="items-block">
             <div class="section-header">
               <h3 class="section-title">Buyurtma tarkibi</h3>
             </div>
 
-            <div v-if="activeOrder.items.length === 0" class="state-text">
-              Buyurtma tanlanmagan.
-            </div>
+            <BaseEmptyState
+              v-if="activeOrder.items.length === 0"
+              message="Hozircha taomlar qo‘shilmagan."
+            />
 
             <div v-else class="items-list">
               <div
@@ -261,72 +270,69 @@
                 class="item-row"
               >
                 <div class="item-info">
-                  <p class="product-title">{{ item.item_name }}</p>
-                  <p class="board-text">
-                    {{ formatPrice(item.unit_price) }} • {{ formatPrice(item.total_price) }}
-                  </p>
+                  <span class="item-name">{{ item.item_name }}</span>
+                  <span class="item-meta">
+                    {{ formatPrice(item.unit_price) }} × {{ item.quantity }}
+                  </span>
                 </div>
 
                 <div class="item-actions">
-                  <BaseButton
-                    variant="secondary"
+                  <button
+                    type="button"
+                    class="step-btn"
                     :disabled="!isOrderOpen || actionLoading || item.quantity <= 1"
                     @click="changeQuantity(item, item.quantity - 1)"
                   >
-                    <template #icon>
-                      <Minus />
-                    </template>
-                  </BaseButton>
-
+                    <Minus />
+                  </button>
                   <span class="quantity-badge">{{ item.quantity }}</span>
-
-                  <BaseButton
-                    variant="secondary"
+                  <button
+                    type="button"
+                    class="step-btn"
                     :disabled="!isOrderOpen || actionLoading"
                     @click="changeQuantity(item, item.quantity + 1)"
                   >
-                    <template #icon>
-                      <Plus />
-                    </template>
-                  </BaseButton>
-
-                  <BaseButton
-                    variant="danger"
+                    <Plus />
+                  </button>
+                  <button
+                    type="button"
+                    class="step-btn step-btn--danger"
                     :disabled="!isOrderOpen || actionLoading"
+                    aria-label="Olib tashlash"
                     @click="removeItem(item.id)"
                   >
-                    <template #icon>
-                      <Trash2 />
-                    </template>
-                    Olib tashlash
-                  </BaseButton>
+                    <Trash2 />
+                  </button>
                 </div>
+
+                <strong class="item-total">{{ formatPrice(item.total_price) }}</strong>
               </div>
             </div>
+          </div>
 
-            <div class="final-actions">
-              <BaseButton
-                :disabled="!isOrderOpen || actionLoading"
-                @click="markReady"
-              >
-                <template #icon>
-                  <Check />
-                </template>
-                Tayyor
-              </BaseButton>
-              <BaseButton
-                variant="danger"
-                :disabled="!isOrderOpen || actionLoading"
-                @click="cancelOrder"
-              >
-                <template #icon>
-                  <Ban />
-                </template>
-                Bekor qilish
-              </BaseButton>
-            </div>
-          </BaseCard>
-        </template>
+          <div class="final-actions">
+            <BaseButton
+              variant="danger"
+              :disabled="!isOrderOpen || actionLoading"
+              @click="cancelOrder"
+            >
+              <template #icon>
+                <Ban />
+              </template>
+              Bekor qilish
+            </BaseButton>
+            <BaseButton
+              class="ready-btn"
+              :disabled="!isOrderOpen || actionLoading || activeOrder.items.length === 0"
+              @click="markReady"
+            >
+              <template #icon>
+                <Check />
+              </template>
+              Tayyor
+            </BaseButton>
+          </div>
+        </BaseCard>
       </div>
     </div>
   </BasePage>
@@ -334,13 +340,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { Ban, Check, Minus, Plus, Trash2 } from 'lucide-vue-next';
+import { Ban, Check, Minus, Plus, Printer, Trash2, X } from 'lucide-vue-next';
 import { api } from '../services/api';
 import BaseButton from '../components/base/BaseButton.vue';
 import BaseCard from '../components/base/BaseCard.vue';
 import BaseEmptyState from '../components/base/BaseEmptyState.vue';
 import BasePage from '../components/base/BasePage.vue';
-import BaseSectionHeader from '../components/base/BaseSectionHeader.vue';
 
 const orderApi = window.api.order;
 
@@ -357,7 +362,35 @@ const combos = ref([]);
 const openDineInOrders = ref([]);
 const openTakeawayOrders = ref([]);
 const readyOrders = ref([]);
-const clearedReadyOrderIds = ref([]);
+const clearedReadyOrderIds = ref(loadClearedReadyIds());
+const catalogTab = ref('foods');
+const printingOrderId = ref(null);
+
+const CLEARED_READY_STORAGE_KEY = 'orders.clearedReadyIds';
+
+function loadClearedReadyIds() {
+  try {
+    const raw = window.localStorage.getItem('orders.clearedReadyIds');
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map((value) => Number(value)).filter((value) => Number.isInteger(value));
+  } catch (_error) {
+    return [];
+  }
+}
+
+function persistClearedReadyIds(ids) {
+  try {
+    window.localStorage.setItem(CLEARED_READY_STORAGE_KEY, JSON.stringify(ids));
+  } catch (_error) {
+    // ignore storage errors (quota, disabled, etc.)
+  }
+}
 
 const activeFoods = computed(() => foods.value.filter((item) => item.is_active === 1));
 const activeCombos = computed(() => combos.value.filter((item) => item.is_active === 1));
@@ -391,26 +424,36 @@ function mapErrorMessage(error) {
       return 'Faol bo‘lmagan comboni qo‘shib bo‘lmaydi.';
     case 'INVALID_QUANTITY':
       return 'Soni noto‘g‘ri.';
+    case 'ORDER_NOT_READY':
+      return 'Buyurtma hali tayyor emas.';
+    case 'RECEIPT_BINARY_NOT_FOUND':
+      return 'Chek dasturi topilmadi.';
+    case 'RECEIPT_PRINT_FAILED':
+      return 'Chekni chiqarib bo‘lmadi.';
     default:
       return 'Xatolik yuz berdi.';
   }
 }
 
-function formatPrice(price) {
-  return `${Number(price || 0).toLocaleString('uz-UZ')} so‘m`;
-}
-
-function formatTime(value) {
-  if (!value) {
-    return '';
+async function printReceipt(orderId) {
+  if (printingOrderId.value !== null) {
+    return;
   }
 
-  return new Date(value).toLocaleString('uz-UZ', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  printingOrderId.value = orderId;
+  errorMessage.value = '';
+
+  try {
+    await api.order.printReceipt(orderId);
+  } catch (error) {
+    errorMessage.value = mapErrorMessage(error);
+  } finally {
+    printingOrderId.value = null;
+  }
+}
+
+function formatPrice(price) {
+  return `${Number(price || 0).toLocaleString('uz-UZ')} so‘m`;
 }
 
 function orderStatusText(status) {
@@ -428,11 +471,22 @@ function orderStatusText(status) {
 function clearReadyOrder(orderId) {
   if (!clearedReadyOrderIds.value.includes(orderId)) {
     clearedReadyOrderIds.value = [...clearedReadyOrderIds.value, orderId];
+    persistClearedReadyIds(clearedReadyOrderIds.value);
   }
 }
 
 function clearAllReadyOrders() {
-  clearedReadyOrderIds.value = readyOrders.value.map((order) => order.id);
+  const merged = new Set(clearedReadyOrderIds.value);
+  for (const order of readyOrders.value) {
+    merged.add(order.id);
+  }
+  clearedReadyOrderIds.value = Array.from(merged);
+  persistClearedReadyIds(clearedReadyOrderIds.value);
+}
+
+function restoreClearedReadyOrders() {
+  clearedReadyOrderIds.value = [];
+  persistClearedReadyIds(clearedReadyOrderIds.value);
 }
 
 async function loadResources() {
@@ -625,8 +679,9 @@ async function markReady() {
     selectedTableId.value = null;
     await loadBoards();
 
-    if (!clearedReadyOrderIds.value.includes(readyOrderId)) {
+    if (clearedReadyOrderIds.value.includes(readyOrderId)) {
       clearedReadyOrderIds.value = clearedReadyOrderIds.value.filter((id) => id !== readyOrderId);
+      persistClearedReadyIds(clearedReadyOrderIds.value);
     }
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
@@ -661,10 +716,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.page-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.error-text {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-1);
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: var(--font-size-sm);
+}
+
 .page-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: var(--space-3);
+  align-items: start;
 }
 
 .left-column,
@@ -672,170 +750,540 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
 }
 
-.top-controls,
-.section-header,
-.order-summary,
-.board-footer {
+.right-column {
+  position: sticky;
+  top: var(--space-3);
+}
+
+:deep(.card) {
+  padding: var(--space-3);
+}
+
+.source-row {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
-.mode-actions,
-.item-actions,
-.final-actions {
+.mode-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg-surface-soft);
+}
+
+.mode-btn {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-btn--active {
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-soft);
+}
+
+.section-header {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .section-title {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.error-text {
-  padding: var(--space-3);
-  border: 1px solid #fecaca;
-  border-radius: var(--radius-1);
-  background: #fef2f2;
-  color: #b91c1c;
+.header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.state-text,
-.board-text,
-.summary-label,
-.summary-line {
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-secondary);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:disabled {
+  color: var(--color-text-soft);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.state-text {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
-.table-grid,
-.board-grid,
-.ready-grid,
-.product-grid,
-.items-list,
-.workspace-grid {
+.table-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   gap: var(--space-2);
 }
 
-.table-grid {
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-}
-
-.board-grid,
-.ready-grid {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-}
-
-.workspace-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .table-tile {
-  min-height: 58px;
-  padding: 8px 10px;
+  position: relative;
+  min-height: 56px;
+  padding: 6px 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-bg-surface-soft);
   color: var(--color-text);
-  text-align: left;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-tile:hover {
+  border-color: var(--color-border-strong);
+}
+
+.table-tile--busy {
+  background: #eefbf3;
+  border-color: #bbf7d0;
 }
 
 .table-tile--selected {
   border-color: var(--color-primary);
   background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
-.table-tile--busy {
-  background: #eefbf3;
+.table-tile__title {
+  font-size: var(--font-size-sm);
 }
 
-.table-tile__title,
-.board-title,
-.product-title {
+.table-tile__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.board-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 42px;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg-surface-soft);
+  color: var(--color-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.board-row:hover {
+  border-color: var(--color-border-strong);
+}
+
+.board-row--active {
+  border-color: var(--color-primary);
+  background: #eff6ff;
+}
+
+.board-row--ready {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  cursor: default;
+}
+
+.board-row__id {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.board-row__mid {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-row__price {
+  font-size: var(--font-size-sm);
   color: var(--color-text);
   font-weight: 700;
 }
 
-.board-card,
-.product-card,
-.item-row,
-.summary-pill {
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--color-secondary);
+  color: var(--color-text);
+}
+
+.icon-btn :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.workspace-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.workspace {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-bg-surface-soft);
+  gap: var(--space-3);
 }
 
-.board-card--ready {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+.workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.board-info {
+.workspace-head__left {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.product-grid {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+.workspace-head__right {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.product-price,
-.quantity-badge {
+.workspace-title {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.workspace-sub {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-chip--open {
+  background: #eff6ff;
+  color: var(--color-primary);
+}
+
+.status-chip--ready {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.status-chip--cancelled {
+  background: #fef2f2;
+  color: var(--color-danger);
+}
+
+.workspace-total {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+}
+
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tab-row {
+  display: inline-flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab-btn {
+  padding: 6px var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab-btn--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-2);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.catalog-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-1);
+  min-height: 64px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg-surface-soft);
+  text-align: left;
+  cursor: pointer;
+}
+
+.catalog-tile:not(:disabled):hover {
+  border-color: var(--color-primary);
+  background: #eff6ff;
+}
+
+.catalog-tile:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.catalog-tile__title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.catalog-tile__price {
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
   font-weight: 700;
 }
 
-.summary-boxes,
-.final-actions {
+.items-block {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  flex-direction: column;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .item-row {
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg-surface-soft);
 }
 
 .item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
+}
+
+.item-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.step-btn:not(:disabled):hover {
+  background: var(--color-secondary);
+}
+
+.step-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.step-btn--danger {
+  color: var(--color-danger);
+  border-color: #fecaca;
+}
+
+.step-btn--danger:not(:disabled):hover {
+  background: #fef2f2;
+}
+
+.step-btn :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .quantity-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
+  min-width: 28px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.item-total {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.final-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.final-actions :deep(.button) {
+  width: 100%;
+  min-height: 48px;
+  font-size: var(--font-size-md);
+}
+
+.ready-btn {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.ready-btn:not(:disabled):hover {
+  background: #15803d;
+  border-color: #15803d;
 }
 
 @media (max-width: 1180px) {
-  .page-layout,
-  .workspace-grid {
+  .page-layout {
     grid-template-columns: 1fr;
+  }
+
+  .right-column {
+    position: static;
   }
 }
 
 @media (max-width: 720px) {
-  .top-controls,
-  .section-header,
-  .order-summary,
-  .board-footer,
-  .item-row {
+  .source-row,
+  .workspace-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .item-actions {
+    justify-content: space-between;
   }
 }
 </style>

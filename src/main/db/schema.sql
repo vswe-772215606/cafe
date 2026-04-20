@@ -89,3 +89,9 @@ CREATE INDEX IF NOT EXISTS idx_order_items_food_id ON order_items(food_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_combo_id ON order_items(combo_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_item_name ON order_items(item_name);
 CREATE INDEX IF NOT EXISTS idx_order_items_created_at ON order_items(created_at);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at TEXT NOT NULL
+);

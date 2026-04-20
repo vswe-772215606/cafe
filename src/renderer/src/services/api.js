@@ -49,13 +49,23 @@ export const api = {
     removeItem: (orderId, itemId) => window.api.order.removeItem(orderId, itemId),
     close: (orderId) => window.api.order.close(orderId),
     cancel: (orderId) => window.api.order.cancel(orderId),
+    printReceipt: (orderId) => window.api.order.printReceipt(orderId),
   },
 
   analytics: {
-    getSummary: (data) => window.api.analytics.getSummary(data),
-    getTopItems: (data) => window.api.analytics.getTopItems(data),
-    getSalesByType: (data) => window.api.analytics.getSalesByType(data),
-    getSalesByTable: (data) => window.api.analytics.getSalesByTable(data),
-    getRecent: (limit) => window.api.analytics.getRecentCompletedOrders(limit),
+    getSummary: (payload) => window.api.analytics.getSummary(payload),
+    getTopItems: (payload) => window.api.analytics.getTopItems(payload),
+    getSalesByType: (payload) => window.api.analytics.getSalesByType(payload),
+    getSalesByOrderType: (payload) => window.api.analytics.getSalesByOrderType(payload),
+    getSalesByTable: (payload) => window.api.analytics.getSalesByTable(payload),
+    getRecent: (payload) => window.api.analytics.getRecent(payload),
+    exportExcel: (payload) => window.api.analytics.exportExcel(payload),
+  },
+
+  settings: {
+    listPrinters: () => window.api.settings.listPrinters(),
+    getPrinterSettings: () => window.api.settings.getPrinterSettings(),
+    savePrinterSettings: (payload) => window.api.settings.savePrinterSettings(payload),
+    testReceiptPrinter: (printerName) => window.api.settings.testReceiptPrinter(printerName),
   },
 };

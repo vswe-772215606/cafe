@@ -47,13 +47,21 @@ contextBridge.exposeInMainWorld('api', {
     listOpenTakeawayOrders: () => ipcRenderer.invoke('order:listOpenTakeawayOrders'),
     listRecentOrders: (limit) => ipcRenderer.invoke('order:listRecentOrders', limit),
     listReadyOrders: (limit) => ipcRenderer.invoke('order:listReadyOrders', limit),
+    printReceipt: (orderId) => ipcRenderer.invoke('order:printReceipt', orderId),
   },
   analytics: {
     getSummary: (payload) => ipcRenderer.invoke('analytics:getSummary', payload),
     getTopItems: (payload) => ipcRenderer.invoke('analytics:getTopItems', payload),
     getSalesByType: (payload) => ipcRenderer.invoke('analytics:getSalesByType', payload),
-    getSalesByTable: (payload) => ipcRenderer.invoke('analytics:getSalesByTable', payload),
     getSalesByOrderType: (payload) => ipcRenderer.invoke('analytics:getSalesByOrderType', payload),
-    getRecentCompletedOrders: (limit) => ipcRenderer.invoke('analytics:getRecentCompletedOrders', limit),
+    getSalesByTable: (payload) => ipcRenderer.invoke('analytics:getSalesByTable', payload),
+    getRecent: (payload) => ipcRenderer.invoke('analytics:getRecent', payload),
+    exportExcel: (payload) => ipcRenderer.invoke('analytics:exportExcel', payload),
+  },
+  settings: {
+    listPrinters: () => ipcRenderer.invoke('settings:listPrinters'),
+    getPrinterSettings: () => ipcRenderer.invoke('settings:getPrinterSettings'),
+    savePrinterSettings: (payload) => ipcRenderer.invoke('settings:savePrinterSettings', payload),
+    testReceiptPrinter: (printerName) => ipcRenderer.invoke('settings:testReceiptPrinter', printerName),
   },
 });
