@@ -7,12 +7,30 @@
       </div>
 
       <nav class="nav">
-        <RouterLink to="/food-groups" class="nav-link">Menyu</RouterLink>
-        <RouterLink to="/foods" class="nav-link">Taomlar</RouterLink>
-        <RouterLink to="/tables" class="nav-link">Stollar</RouterLink>
-        <RouterLink to="/combos" class="nav-link">Combo</RouterLink>
-        <RouterLink to="/orders" class="nav-link">Buyurtmalar</RouterLink>
-        <RouterLink to="/analytics" class="nav-link">Hisobotlar</RouterLink>
+        <RouterLink to="/food-groups" class="nav-link">
+          <FolderOpen class="nav-icon" />
+          <span>Menyu</span>
+        </RouterLink>
+        <RouterLink to="/foods" class="nav-link">
+          <UtensilsCrossed class="nav-icon" />
+          <span>Taomlar</span>
+        </RouterLink>
+        <RouterLink to="/tables" class="nav-link">
+          <TableProperties class="nav-icon" />
+          <span>Stollar</span>
+        </RouterLink>
+        <RouterLink to="/combos" class="nav-link">
+          <Package class="nav-icon" />
+          <span>Combo</span>
+        </RouterLink>
+        <RouterLink to="/orders" class="nav-link">
+          <ReceiptText class="nav-icon" />
+          <span>Buyurtmalar</span>
+        </RouterLink>
+        <RouterLink to="/analytics" class="nav-link">
+          <BarChart3 class="nav-icon" />
+          <span>Hisobotlar</span>
+        </RouterLink>
       </nav>
     </aside>
 
@@ -24,6 +42,14 @@
 
 <script setup>
 import { RouterLink, RouterView } from 'vue-router';
+import {
+  BarChart3,
+  FolderOpen,
+  Package,
+  ReceiptText,
+  TableProperties,
+  UtensilsCrossed,
+} from 'lucide-vue-next';
 </script>
 
 <style scoped>
@@ -67,6 +93,9 @@ import { RouterLink, RouterView } from 'vue-router';
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   padding: 12px 14px;
   border-radius: 10px;
   color: #d1d5db;
@@ -82,6 +111,12 @@ import { RouterLink, RouterView } from 'vue-router';
 .nav-link.router-link-active {
   background: #2563eb;
   color: #ffffff;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 .content {

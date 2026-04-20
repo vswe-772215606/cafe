@@ -5,7 +5,12 @@
       description="Bu yerda menyu bo‘limlarini boshqarish mumkin."
     >
       <template #actions>
-        <BaseButton @click="openCreateModal">Yangi bo‘lim</BaseButton>
+        <BaseButton @click="openCreateModal">
+          <template #icon>
+            <Plus />
+          </template>
+          Yangi bo‘lim
+        </BaseButton>
       </template>
     </BaseSectionHeader>
 
@@ -28,9 +33,15 @@
           </div>
           <div class="group-actions">
             <BaseButton variant="secondary" @click="openEditModal(group)">
+              <template #icon>
+                <Pencil />
+              </template>
               Tahrirlash
             </BaseButton>
             <BaseButton variant="danger" @click="openDeleteModal(group)">
+              <template #icon>
+                <Trash2 />
+              </template>
               O‘chirish
             </BaseButton>
           </div>
@@ -50,8 +61,16 @@
       />
 
       <template #footer>
-        <BaseButton variant="ghost" @click="closeModal">Bekor qilish</BaseButton>
+        <BaseButton variant="ghost" @click="closeModal">
+          <template #icon>
+            <X />
+          </template>
+          Bekor qilish
+        </BaseButton>
         <BaseButton :disabled="submitting" @click="createGroup">
+          <template #icon>
+            <Check />
+          </template>
           {{ submitting ? 'Saqlanmoqda...' : 'Saqlash' }}
         </BaseButton>
       </template>
@@ -69,8 +88,16 @@
       />
 
       <template #footer>
-        <BaseButton variant="ghost" @click="closeModal">Bekor qilish</BaseButton>
+        <BaseButton variant="ghost" @click="closeModal">
+          <template #icon>
+            <X />
+          </template>
+          Bekor qilish
+        </BaseButton>
         <BaseButton :disabled="submitting" @click="saveEdit">
+          <template #icon>
+            <Check />
+          </template>
           {{ submitting ? 'Saqlanmoqda...' : 'Saqlash' }}
         </BaseButton>
       </template>
@@ -84,8 +111,16 @@
       <p class="modal-text">Haqiqatan ham bu bo‘limni o‘chirmoqchimisiz?</p>
 
       <template #footer>
-        <BaseButton variant="ghost" @click="closeModal">Bekor qilish</BaseButton>
+        <BaseButton variant="ghost" @click="closeModal">
+          <template #icon>
+            <X />
+          </template>
+          Bekor qilish
+        </BaseButton>
         <BaseButton variant="danger" :disabled="submitting" @click="deleteGroup">
+          <template #icon>
+            <Trash2 />
+          </template>
           {{ submitting ? 'O‘chirilmoqda...' : 'O‘chirish' }}
         </BaseButton>
       </template>
@@ -95,6 +130,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-vue-next';
 import { api } from '../services/api';
 import BaseButton from '../components/base/BaseButton.vue';
 import BaseCard from '../components/base/BaseCard.vue';

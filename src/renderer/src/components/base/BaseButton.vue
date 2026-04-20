@@ -1,6 +1,11 @@
 <template>
   <button :class="['button', `button--${variant}`]" :type="type" :disabled="disabled">
-    <slot />
+    <span v-if="$slots.icon" class="icon">
+      <slot name="icon" />
+    </span>
+    <span v-if="$slots.default" class="label">
+      <slot />
+    </span>
   </button>
 </template>
 
@@ -26,7 +31,7 @@ defineProps({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: 6px;
   min-height: 42px;
   padding: 0 var(--space-3);
   border: 1px solid transparent;
@@ -77,5 +82,23 @@ defineProps({
 
 .button--ghost:not(:disabled):hover {
   background: var(--color-bg-surface-soft);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.icon :deep(svg) {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
 }
 </style>
