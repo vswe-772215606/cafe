@@ -6,13 +6,9 @@
     >
       <template #actions>
         <div class="header-actions">
-          <label class="filter-field">
-            <span class="filter-label">Menyu</span>
-            <select
-              v-model="selectedGroupId"
-              class="select"
-              @change="loadFoods"
-            >
+          <label class="field">
+            <span class="field-label">Menyu</span>
+            <select v-model="selectedGroupId" class="select" @change="loadFoods">
               <option value="">Barcha menyular</option>
               <option
                 v-for="group in foodGroups"
@@ -48,27 +44,19 @@
     <BaseGrid v-else>
       <BaseCard v-for="food in foods" :key="food.id">
         <div class="food-card">
-          <div class="food-main">
-            <h3 class="food-name">{{ food.name }}</h3>
-            <p class="food-price">{{ formatPrice(food.price) }}</p>
-          </div>
-
-          <div class="food-meta">
-            <span class="meta-label">Menyu:</span>
-            <span>{{ food.food_group_name }}</span>
-          </div>
-
-          <div class="food-meta">
-            <span class="meta-label">Holati:</span>
+          <div class="food-head">
+            <div>
+              <h3 class="food-name">{{ food.name }}</h3>
+              <p class="food-group">{{ food.food_group_name }}</p>
+            </div>
             <span
-              :class="[
-                'status-badge',
-                food.is_active === 1 ? 'status-badge--active' : 'status-badge--inactive',
-              ]"
+              :class="['status-badge', food.is_active === 1 ? 'status-badge--active' : 'status-badge--inactive']"
             >
               {{ food.is_active === 1 ? 'Faol' : 'Faol emas' }}
             </span>
           </div>
+
+          <p class="food-price">{{ formatPrice(food.price) }}</p>
 
           <div class="food-actions">
             <BaseButton variant="secondary" @click="openEditModal(food)">
@@ -90,8 +78,8 @@
                 statusLoadingId === food.id
                   ? 'Saqlanmoqda...'
                   : food.is_active === 1
-                    ? 'Faol emas'
-                    : 'Faol'
+                    ? 'Faol emas qilish'
+                    : 'Faollashtirish'
               }}
             </BaseButton>
 
@@ -107,8 +95,8 @@
     </BaseGrid>
 
     <BaseModal
-      v-if="activeModal === 'create'"
-      title="Yangi taom qo‘shish"
+      v-if="activeModal === 'create' || activeModal === 'edit'"
+      :title="activeModal === 'create' ? 'Yangi taom' : 'Taomni tahrirlash'"
       @close="closeModal"
     >
       <div class="modal-form">
@@ -125,8 +113,8 @@
           placeholder="Masalan: 25000"
         />
 
-        <label class="filter-field">
-          <span class="filter-label">Menyu</span>
+        <label class="field">
+          <span class="field-label">Menyu</span>
           <select v-model="form.foodGroupId" class="select">
             <option value="">Menyuni tanlang</option>
             <option
@@ -147,57 +135,7 @@
           </template>
           Bekor qilish
         </BaseButton>
-        <BaseButton :disabled="submitting" @click="createFood">
-          <template #icon>
-            <Check />
-          </template>
-          {{ submitting ? 'Saqlanmoqda...' : 'Saqlash' }}
-        </BaseButton>
-      </template>
-    </BaseModal>
-
-    <BaseModal
-      v-if="activeModal === 'edit'"
-      title="Taomni tahrirlash"
-      @close="closeModal"
-    >
-      <div class="modal-form">
-        <BaseInput
-          v-model="form.name"
-          label="Taom nomi"
-          placeholder="Masalan: Osh"
-        />
-
-        <BaseInput
-          v-model="form.price"
-          label="Narxi"
-          type="number"
-          placeholder="Masalan: 25000"
-        />
-
-        <label class="filter-field">
-          <span class="filter-label">Menyu</span>
-          <select v-model="form.foodGroupId" class="select">
-            <option value="">Menyuni tanlang</option>
-            <option
-              v-for="group in foodGroups"
-              :key="group.id"
-              :value="String(group.id)"
-            >
-              {{ group.name }}
-            </option>
-          </select>
-        </label>
-      </div>
-
-      <template #footer>
-        <BaseButton variant="ghost" @click="closeModal">
-          <template #icon>
-            <X />
-          </template>
-          Bekor qilish
-        </BaseButton>
-        <BaseButton :disabled="submitting" @click="saveFood">
+        <BaseButton :disabled="submitting" @click="submitForm">
           <template #icon>
             <Check />
           </template>
@@ -224,7 +162,7 @@
           <template #icon>
             <Trash2 />
           </template>
-          {{ submitting ? 'Saqlanmoqda...' : 'O‘chirish' }}
+          {{ submitting ? 'O‘chirilmoqda...' : 'O‘chirish' }}
         </BaseButton>
       </template>
     </BaseModal>
@@ -271,10 +209,14 @@ function mapErrorMessage(error) {
     case 'FOOD_NOT_FOUND':
       return 'Taom topilmadi.';
     case 'FOOD_DELETE_FAILED':
-      return 'Bu taomni o‘chirib bo‘lmaydi. Avval unga bog‘langan buyurtma yoki combo ma’lumotlarini tekshiring.';
+      return 'Bu taomni o‘chirib bo‘lmaydi.';
     default:
       return 'Xatolik yuz berdi.';
   }
+}
+
+function formatPrice(price) {
+  return `${Number(price || 0).toLocaleString('uz-UZ')} so‘m`;
 }
 
 function resetForm() {
@@ -289,28 +231,16 @@ function closeModal() {
   resetForm();
 }
 
-function formatPrice(price) {
-  return `${Number(price).toLocaleString('uz-UZ')} so‘m`;
-}
-
 async function loadFoodGroups() {
   foodGroups.value = await api.foodGroup.getAll();
 }
 
 async function loadFoods() {
-  loading.value = true;
+  const data = selectedGroupId.value
+    ? await api.food.getByFoodGroupId(Number(selectedGroupId.value))
+    : await api.food.getAll();
 
-  try {
-    if (selectedGroupId.value) {
-      foods.value = await api.food.getByFoodGroupId(Number(selectedGroupId.value));
-    } else {
-      foods.value = await api.food.getAll();
-    }
-  } catch (error) {
-    errorMessage.value = mapErrorMessage(error);
-  } finally {
-    loading.value = false;
-  }
+  foods.value = data;
 }
 
 async function loadPageData() {
@@ -318,17 +248,19 @@ async function loadPageData() {
   errorMessage.value = '';
 
   try {
-    await Promise.all([loadFoodGroups(), loadFoods()]);
+    await loadFoodGroups();
+    await loadFoods();
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
+  } finally {
     loading.value = false;
   }
 }
 
 function openCreateModal() {
   errorMessage.value = '';
-  selectedFood.value = null;
   resetForm();
+  selectedFood.value = null;
   activeModal.value = 'create';
 }
 
@@ -347,39 +279,23 @@ function openDeleteModal(food) {
   activeModal.value = 'delete';
 }
 
-async function createFood() {
+async function submitForm() {
   errorMessage.value = '';
   submitting.value = true;
 
-  try {
-    await api.food.create({
-      name: form.name.trim(),
-      price: Number(form.price),
-      foodGroupId: Number(form.foodGroupId),
-    });
-    closeModal();
-    await loadFoods();
-  } catch (error) {
-    errorMessage.value = mapErrorMessage(error);
-  } finally {
-    submitting.value = false;
-  }
-}
-
-async function saveFood() {
-  if (!selectedFood.value) {
-    return;
-  }
-
-  errorMessage.value = '';
-  submitting.value = true;
+  const payload = {
+    name: form.name.trim(),
+    price: Number(form.price),
+    foodGroupId: Number(form.foodGroupId),
+  };
 
   try {
-    await api.food.update(selectedFood.value.id, {
-      name: form.name.trim(),
-      price: Number(form.price),
-      foodGroupId: Number(form.foodGroupId),
-    });
+    if (activeModal.value === 'create') {
+      await api.food.create(payload);
+    } else if (selectedFood.value) {
+      await api.food.update(selectedFood.value.id, payload);
+    }
+
     closeModal();
     await loadFoods();
   } catch (error) {
@@ -434,13 +350,13 @@ onMounted(() => {
   gap: var(--space-3);
 }
 
-.filter-field {
+.field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.filter-label {
+.field-label {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text);
@@ -481,10 +397,11 @@ onMounted(() => {
   min-height: 180px;
 }
 
-.food-main {
+.food-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .food-name {
@@ -493,29 +410,24 @@ onMounted(() => {
   color: var(--color-text);
 }
 
-.food-price {
-  font-size: var(--font-size-md);
-  font-weight: 600;
-  color: var(--color-primary);
-}
-
-.food-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.food-group {
+  margin-top: 2px;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
-.meta-label {
-  color: var(--color-text-soft);
+.food-price {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 .status-badge {
-  padding: 3px 8px;
+  padding: 4px 8px;
   border-radius: var(--radius-1);
   font-size: var(--font-size-xs);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-badge--active {
@@ -530,7 +442,6 @@ onMounted(() => {
 
 .food-actions {
   display: grid;
-  grid-template-columns: 1fr;
   gap: var(--space-2);
   margin-top: auto;
 }
