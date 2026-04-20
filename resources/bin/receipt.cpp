@@ -5,6 +5,9 @@
 //   cl /EHsc /std:c++17 receipt.cpp /link winspool.lib
 // Build (MinGW):
 //   g++ -std=c++17 -O2 receipt.cpp -o receipt.exe -lwinspool
+// Note:
+//   If this binary runs on one Windows machine but not another, prefer a static
+//   build when possible to reduce VC++ runtime dependency issues.
 //
 // Invocation (7 positional args, all UTF-8):
 //   receipt.exe <printer> <heading> <orderInfo> <items> <subtotal> <discount> <total>
@@ -112,9 +115,44 @@ std::string wideToUtf8(const std::wstring& s) {
     return result;
 }
 
+std::string windowsErrorMessage(DWORD errorCode) {
+    LPWSTR buffer = nullptr;
+
+    DWORD length = FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        errorCode,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPWSTR>(&buffer),
+        0,
+        nullptr
+    );
+
+    if (length == 0 || buffer == nullptr) {
+        return "Unknown Windows error";
+    }
+
+    std::wstring message(buffer, length);
+    LocalFree(buffer);
+
+    while (!message.empty() && (message.back() == L'\r' || message.back() == L'\n' || message.back() == L' ')) {
+        message.pop_back();
+    }
+
+    return wideToUtf8(message);
+}
+
+void writePrinterError(const std::string& apiName, DWORD errorCode) {
+    std::cerr
+        << apiName
+        << " failed. GetLastError=" << errorCode
+        << " message=\"" << windowsErrorMessage(errorCode) << "\"\n";
+}
+
 bool sendToPrinter(const std::wstring& printerName, const std::string& payload) {
     HANDLE hPrinter = nullptr;
     if (!OpenPrinterW(const_cast<LPWSTR>(printerName.c_str()), &hPrinter, nullptr)) {
+        writePrinterError("OpenPrinterW", GetLastError());
         return false;
     }
 
@@ -125,15 +163,19 @@ bool sendToPrinter(const std::wstring& printerName, const std::string& payload) 
 
     DWORD jobId = StartDocPrinterW(hPrinter, 1, reinterpret_cast<LPBYTE>(&docInfo));
     if (jobId == 0) {
+        writePrinterError("StartDocPrinterW", GetLastError());
         ClosePrinter(hPrinter);
         return false;
     }
 
     bool ok = true;
+    bool pageStarted = false;
 
     if (!StartPagePrinter(hPrinter)) {
+        writePrinterError("StartPagePrinter", GetLastError());
         ok = false;
     } else {
+        pageStarted = true;
         DWORD written = 0;
         BOOL writeOk = WritePrinter(
             hPrinter,
@@ -141,12 +183,30 @@ bool sendToPrinter(const std::wstring& printerName, const std::string& payload) 
             static_cast<DWORD>(payload.size()),
             &written);
         if (!writeOk || written != payload.size()) {
+            if (!writeOk) {
+                writePrinterError("WritePrinter", GetLastError());
+            } else {
+                std::cerr
+                    << "WritePrinter failed. Partial write detected. written="
+                    << written
+                    << " expected=" << payload.size() << "\n";
+            }
             ok = false;
         }
-        EndPagePrinter(hPrinter);
     }
 
-    EndDocPrinter(hPrinter);
+    if (pageStarted) {
+        if (!EndPagePrinter(hPrinter)) {
+            writePrinterError("EndPagePrinter", GetLastError());
+            ok = false;
+        }
+    }
+
+    if (!EndDocPrinter(hPrinter)) {
+        writePrinterError("EndDocPrinter", GetLastError());
+        ok = false;
+    }
+
     ClosePrinter(hPrinter);
     return ok;
 }
@@ -183,6 +243,11 @@ int main() {
     const std::string totalAmount     = argv[7];
 
     const std::wstring printerName = utf8ToWide(printerNameUtf8);
+
+    if (printerNameUtf8.empty() || printerName.empty()) {
+        std::cerr << "Printer name is empty or invalid\n";
+        return 1;
+    }
 
     std::string payload;
     payload.reserve(1024);

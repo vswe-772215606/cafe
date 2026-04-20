@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 
 const RECEIPT_PRINTER_KEY = 'receipt.printer.name';
 const BINARY_NAME = process.platform === 'win32' ? 'receipt.exe' : 'receipt';
+const PRINT_TIMEOUT_MS = 15000;
 
 function binaryCandidates() {
   const results = [];
@@ -32,6 +33,46 @@ function resolveBinaryPath() {
   }
 
   return null;
+}
+
+function getPrintLogPath() {
+  const logsDir = path.join(app.getPath('userData'), 'logs');
+  fs.mkdirSync(logsDir, { recursive: true });
+  return path.join(logsDir, 'print.log');
+}
+
+function writePrintLog(payload) {
+  const line = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...payload,
+  });
+
+  fs.appendFileSync(getPrintLogPath(), `${line}\n`, 'utf8');
+}
+
+function normalizeExecError(error, stdout, stderr, meta) {
+  writePrintLog({
+    scope: 'settings.testReceiptPrinter',
+    ok: false,
+    ...meta,
+    stdout,
+    stderr,
+    errorMessage: error?.message || '',
+    exitCode: error?.code ?? null,
+    signal: error?.signal ?? null,
+    timedOut: error?.killed === true && error?.signal === 'SIGTERM',
+    timeoutMs: PRINT_TIMEOUT_MS,
+  });
+
+  const normalized = new Error('RECEIPT_PRINT_FAILED');
+  normalized.details = {
+    stdout,
+    stderr,
+    exitCode: error?.code ?? null,
+    signal: error?.signal ?? null,
+    message: error?.message || '',
+  };
+  return normalized;
 }
 
 function getReceiptPrinterName() {
@@ -86,14 +127,30 @@ function formatNow() {
 
 async function testReceiptPrinter(printerName) {
   const name = typeof printerName === 'string' ? printerName.trim() : '';
+  const binaryPath = resolveBinaryPath();
+  const meta = {
+    binaryPath,
+    selectedPrinterName: name,
+    binaryCandidates: binaryCandidates(),
+  };
 
   if (!name) {
+    writePrintLog({
+      scope: 'settings.testReceiptPrinter',
+      ok: false,
+      ...meta,
+      errorMessage: 'Printer name is empty',
+    });
     throw new Error('INVALID_PRINTER_NAME');
   }
 
-  const binaryPath = resolveBinaryPath();
-
   if (!binaryPath) {
+    writePrintLog({
+      scope: 'settings.testReceiptPrinter',
+      ok: false,
+      ...meta,
+      errorMessage: 'Receipt binary not found',
+    });
     throw new Error('RECEIPT_BINARY_NOT_FOUND');
   }
 
@@ -113,13 +170,33 @@ async function testReceiptPrinter(printerName) {
     '0.00',
   ];
 
+  writePrintLog({
+    scope: 'settings.testReceiptPrinter',
+    ok: true,
+    phase: 'start',
+    ...meta,
+    argsPreview: args,
+    timeoutMs: PRINT_TIMEOUT_MS,
+  });
+
   try {
-    await execFileAsync(binaryPath, args, {
+    const result = await execFileAsync(binaryPath, args, {
       windowsHide: true,
-      timeout: 15000,
+      timeout: PRINT_TIMEOUT_MS,
+    });
+
+    writePrintLog({
+      scope: 'settings.testReceiptPrinter',
+      ok: true,
+      phase: 'success',
+      ...meta,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      exitCode: 0,
+      timeoutMs: PRINT_TIMEOUT_MS,
     });
   } catch (_error) {
-    throw new Error('RECEIPT_PRINT_FAILED');
+    throw normalizeExecError(_error, _error?.stdout || '', _error?.stderr || '', meta);
   }
 
   return { ok: true };
