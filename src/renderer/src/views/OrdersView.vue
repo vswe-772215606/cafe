@@ -60,6 +60,62 @@
 
         <BaseCard>
           <div class="section-header">
+            <h3 class="section-title">Tayyor buyurtmalar</h3>
+            <div class="header-tools">
+              <span class="count-pill">{{ displayedReadyOrders.length }}</span>
+              <button
+                type="button"
+                class="link-btn"
+                :disabled="displayedReadyOrders.length === 0"
+                @click="clearAllReadyOrders"
+              >
+                Barchasini tozalash
+              </button>
+            </div>
+          </div>
+
+          <BaseEmptyState
+            v-if="!loading && displayedReadyOrders.length === 0"
+            message="Hozircha tayyor buyurtmalar yo‘q."
+          />
+
+          <div v-else class="board-list board-list--ready">
+            <div
+              v-for="order in displayedReadyOrders"
+              :key="order.id"
+              class="board-row board-row--ready"
+            >
+              <span class="board-row__id">#{{ order.id }}</span>
+              <span class="board-row__mid">
+                {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
+                <template v-if="order.table_number">• Stol #{{ order.table_number }}</template>
+              </span>
+              <span class="board-row__time">{{ formatTime(order.closed_at) }}</span>
+              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
+              <button
+                type="button"
+                class="icon-btn"
+                :disabled="printingOrderId === order.id"
+                aria-label="Chek chiqarish"
+                title="Chek chiqarish"
+                @click="printReceipt(order.id)"
+              >
+                <Printer />
+              </button>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Tozalash"
+                @click="clearReadyOrder(order.id)"
+              >
+                <X />
+              </button>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="section-header">
             <h3 class="section-title">Ochiq zal buyurtmalari</h3>
             <span class="count-pill">{{ openDineInOrders.length }}</span>
           </div>
@@ -113,69 +169,6 @@
               <span class="board-row__mid">Olib ketish</span>
               <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
             </button>
-          </div>
-        </BaseCard>
-
-        <BaseCard>
-          <div class="section-header">
-            <h3 class="section-title">Tayyor buyurtmalar</h3>
-            <div class="header-tools">
-              <span class="count-pill">{{ displayedReadyOrders.length }}</span>
-              <button
-                type="button"
-                class="link-btn"
-                :disabled="clearedReadyOrderIds.length === 0"
-                @click="restoreClearedReadyOrders"
-              >
-                Tozalanganlarni ko‘rsatish
-              </button>
-              <button
-                type="button"
-                class="link-btn"
-                :disabled="displayedReadyOrders.length === 0"
-                @click="clearAllReadyOrders"
-              >
-                Barchasini tozalash
-              </button>
-            </div>
-          </div>
-
-          <BaseEmptyState
-            v-if="!loading && displayedReadyOrders.length === 0"
-            message="Hozircha tayyor buyurtmalar yo‘q."
-          />
-
-          <div v-else class="board-list">
-            <div
-              v-for="order in displayedReadyOrders"
-              :key="order.id"
-              class="board-row board-row--ready"
-            >
-              <span class="board-row__id">#{{ order.id }}</span>
-              <span class="board-row__mid">
-                {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
-                <template v-if="order.table_number">• Stol #{{ order.table_number }}</template>
-              </span>
-              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
-              <button
-                type="button"
-                class="icon-btn"
-                :disabled="printingOrderId === order.id"
-                aria-label="Chek chiqarish"
-                title="Chek chiqarish"
-                @click="printReceipt(order.id)"
-              >
-                <Printer />
-              </button>
-              <button
-                type="button"
-                class="icon-btn"
-                aria-label="Tozalash"
-                @click="clearReadyOrder(order.id)"
-              >
-                <X />
-              </button>
-            </div>
           </div>
         </BaseCard>
       </div>
@@ -484,11 +477,6 @@ function clearAllReadyOrders() {
   persistClearedReadyIds(clearedReadyOrderIds.value);
 }
 
-function restoreClearedReadyOrders() {
-  clearedReadyOrderIds.value = [];
-  persistClearedReadyIds(clearedReadyOrderIds.value);
-}
-
 async function loadResources() {
   const [tableList, foodList, comboList] = await Promise.all([
     api.table.getAll(),
@@ -743,6 +731,7 @@ onMounted(() => {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: var(--space-3);
   align-items: start;
+  min-height: calc(100vh - 92px);
 }
 
 .left-column,
@@ -751,11 +740,13 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  min-height: 0;
 }
 
 .right-column {
   position: sticky;
   top: var(--space-3);
+  max-height: calc(100vh - 92px);
 }
 
 :deep(.card) {
@@ -816,6 +807,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .count-pill {
@@ -907,11 +899,18 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 170px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.board-list--ready {
+  max-height: 210px;
 }
 
 .board-row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
   gap: var(--space-2);
   min-height: 42px;
@@ -960,6 +959,12 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.board-row__time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -994,6 +999,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
 }
 
 .workspace-head {
@@ -1268,6 +1275,12 @@ onMounted(() => {
 
   .right-column {
     position: static;
+    max-height: none;
+  }
+
+  .workspace {
+    max-height: none;
+    overflow: visible;
   }
 }
 
