@@ -69,9 +69,10 @@ const navItems = [
 .app-layout {
   display: grid;
   grid-template-columns: 200px 1fr;
-  min-height: 100vh;
+  height: 100vh;
   background: #f3f4f6;
   color: #1f2937;
+  overflow: hidden;
   transition: grid-template-columns 0.18s ease;
 }
 
@@ -83,9 +84,11 @@ const navItems = [
   display: flex;
   flex-direction: column;
   gap: 18px;
+  height: 100vh;
   padding: 18px 12px;
   background: #111827;
   color: #f9fafb;
+  overflow: hidden;
   transition: padding 0.18s ease;
 }
 
@@ -144,6 +147,8 @@ const navItems = [
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .nav-link {
@@ -187,7 +192,10 @@ const navItems = [
 
 .content {
   min-width: 0;
+  height: 100vh;
   padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @media (max-width: 900px) {
@@ -197,6 +205,8 @@ const navItems = [
 
   .sidebar {
     gap: 16px;
+    height: auto;
+    overflow: visible;
   }
 
   .sidebar-top {
@@ -213,7 +223,9 @@ const navItems = [
   }
 
   .content {
+    height: auto;
     padding: 20px;
+    overflow: visible;
   }
 }
 </style>

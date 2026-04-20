@@ -60,62 +60,6 @@
 
         <BaseCard>
           <div class="section-header">
-            <h3 class="section-title">Tayyor buyurtmalar</h3>
-            <div class="header-tools">
-              <span class="count-pill">{{ displayedReadyOrders.length }}</span>
-              <button
-                type="button"
-                class="link-btn"
-                :disabled="displayedReadyOrders.length === 0"
-                @click="clearAllReadyOrders"
-              >
-                Barchasini tozalash
-              </button>
-            </div>
-          </div>
-
-          <BaseEmptyState
-            v-if="!loading && displayedReadyOrders.length === 0"
-            message="Hozircha tayyor buyurtmalar yo‘q."
-          />
-
-          <div v-else class="board-list board-list--ready">
-            <div
-              v-for="order in displayedReadyOrders"
-              :key="order.id"
-              class="board-row board-row--ready"
-            >
-              <span class="board-row__id">#{{ order.id }}</span>
-              <span class="board-row__mid">
-                {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
-                <template v-if="order.table_number">• Stol #{{ order.table_number }}</template>
-              </span>
-              <span class="board-row__time">{{ formatTime(order.closed_at) }}</span>
-              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
-              <button
-                type="button"
-                class="icon-btn"
-                :disabled="printingOrderId === order.id"
-                aria-label="Chek chiqarish"
-                title="Chek chiqarish"
-                @click="printReceipt(order.id)"
-              >
-                <Printer />
-              </button>
-              <button
-                type="button"
-                class="icon-btn"
-                aria-label="Tozalash"
-                @click="clearReadyOrder(order.id)"
-              >
-                <X />
-              </button>
-            </div>
-          </div>
-        </BaseCard>
-
-        <BaseCard>
-          <div class="section-header">
             <h3 class="section-title">Ochiq zal buyurtmalari</h3>
             <span class="count-pill">{{ openDineInOrders.length }}</span>
           </div>
@@ -174,6 +118,62 @@
       </div>
 
       <div class="right-column">
+        <BaseCard>
+          <div class="section-header">
+            <h3 class="section-title">Tayyor buyurtmalar</h3>
+            <div class="header-tools">
+              <span class="count-pill">{{ displayedReadyOrders.length }}</span>
+              <button
+                type="button"
+                class="link-btn"
+                :disabled="displayedReadyOrders.length === 0"
+                @click="clearAllReadyOrders"
+              >
+                Barchasini tozalash
+              </button>
+            </div>
+          </div>
+
+          <BaseEmptyState
+            v-if="!loading && displayedReadyOrders.length === 0"
+            message="Hozircha tayyor buyurtmalar yo‘q."
+          />
+
+          <div v-else class="board-list board-list--ready">
+            <div
+              v-for="order in displayedReadyOrders"
+              :key="order.id"
+              class="board-row board-row--ready"
+            >
+              <span class="board-row__id">#{{ order.id }}</span>
+              <span class="board-row__mid">
+                {{ order.order_type === 'DINE_IN' ? 'Zalda' : 'Olib ketish' }}
+                <template v-if="order.table_number">• Stol #{{ order.table_number }}</template>
+              </span>
+              <span class="board-row__time">{{ formatTime(order.closed_at) }}</span>
+              <strong class="board-row__price">{{ formatPrice(order.total_price) }}</strong>
+              <button
+                type="button"
+                class="icon-btn"
+                :disabled="printingOrderId === order.id"
+                aria-label="Chek chiqarish"
+                title="Chek chiqarish"
+                @click="printReceipt(order.id)"
+              >
+                <Printer />
+              </button>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Tozalash"
+                @click="clearReadyOrder(order.id)"
+              >
+                <X />
+              </button>
+            </div>
+          </div>
+        </BaseCard>
+
         <BaseCard v-if="workspaceLoading" class="workspace-empty">
           <p class="state-text">Yuklanmoqda...</p>
         </BaseCard>
@@ -355,35 +355,9 @@ const combos = ref([]);
 const openDineInOrders = ref([]);
 const openTakeawayOrders = ref([]);
 const readyOrders = ref([]);
-const clearedReadyOrderIds = ref(loadClearedReadyIds());
+const clearedReadyOrderIds = ref([]);
 const catalogTab = ref('foods');
 const printingOrderId = ref(null);
-
-const CLEARED_READY_STORAGE_KEY = 'orders.clearedReadyIds';
-
-function loadClearedReadyIds() {
-  try {
-    const raw = window.localStorage.getItem('orders.clearedReadyIds');
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.map((value) => Number(value)).filter((value) => Number.isInteger(value));
-  } catch (_error) {
-    return [];
-  }
-}
-
-function persistClearedReadyIds(ids) {
-  try {
-    window.localStorage.setItem(CLEARED_READY_STORAGE_KEY, JSON.stringify(ids));
-  } catch (_error) {
-    // ignore storage errors (quota, disabled, etc.)
-  }
-}
 
 const activeFoods = computed(() => foods.value.filter((item) => item.is_active === 1));
 const activeCombos = computed(() => combos.value.filter((item) => item.is_active === 1));
@@ -419,6 +393,8 @@ function mapErrorMessage(error) {
       return 'Soni noto‘g‘ri.';
     case 'ORDER_NOT_READY':
       return 'Buyurtma hali tayyor emas.';
+    case 'PRINTER_NOT_FOUND':
+      return 'Printer topilmadi.';
     case 'RECEIPT_BINARY_NOT_FOUND':
       return 'Chek dasturi topilmadi.';
     case 'RECEIPT_PRINT_FAILED':
@@ -464,17 +440,11 @@ function orderStatusText(status) {
 function clearReadyOrder(orderId) {
   if (!clearedReadyOrderIds.value.includes(orderId)) {
     clearedReadyOrderIds.value = [...clearedReadyOrderIds.value, orderId];
-    persistClearedReadyIds(clearedReadyOrderIds.value);
   }
 }
 
 function clearAllReadyOrders() {
-  const merged = new Set(clearedReadyOrderIds.value);
-  for (const order of readyOrders.value) {
-    merged.add(order.id);
-  }
-  clearedReadyOrderIds.value = Array.from(merged);
-  persistClearedReadyIds(clearedReadyOrderIds.value);
+  clearedReadyOrderIds.value = readyOrders.value.map((order) => order.id);
 }
 
 async function loadResources() {
@@ -663,16 +633,17 @@ async function markReady() {
     const readyOrderId = activeOrder.value.id;
 
     await orderApi.markReady(readyOrderId);
+    await api.order.printReceipt(readyOrderId);
     activeOrder.value = null;
     selectedTableId.value = null;
     await loadBoards();
 
     if (clearedReadyOrderIds.value.includes(readyOrderId)) {
       clearedReadyOrderIds.value = clearedReadyOrderIds.value.filter((id) => id !== readyOrderId);
-      persistClearedReadyIds(clearedReadyOrderIds.value);
     }
   } catch (error) {
     errorMessage.value = mapErrorMessage(error);
+    await loadBoards();
   } finally {
     actionLoading.value = false;
   }

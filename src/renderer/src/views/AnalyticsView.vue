@@ -230,9 +230,21 @@
                   <template v-if="item.table_number">• Stol #{{ item.table_number }}</template>
                 </p>
               </div>
-              <div class="list-right">
-                <p class="item-title">{{ formatPrice(item.total_price) }}</p>
-                <p class="item-meta">{{ formatDate(item.closed_at) }}</p>
+              <div class="recent-right">
+                <div class="list-right">
+                  <p class="item-title">{{ formatPrice(item.total_price) }}</p>
+                  <p class="item-meta">{{ formatDate(item.closed_at) }}</p>
+                </div>
+                <BaseButton
+                  variant="secondary"
+                  :disabled="printingOrderId === item.id"
+                  @click="printReceipt(item.id)"
+                >
+                  <template #icon>
+                    <Printer />
+                  </template>
+                  {{ printingOrderId === item.id ? 'Yuklanmoqda...' : 'Chek chiqarish' }}
+                </BaseButton>
               </div>
             </div>
           </div>
@@ -268,7 +280,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
-import { ChevronLeft, ChevronRight, FileDown, RefreshCw } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, FileDown, Printer, RefreshCw } from 'lucide-vue-next';
 import { api } from '../services/api';
 import BaseButton from '../components/base/BaseButton.vue';
 import BaseCard from '../components/base/BaseCard.vue';
@@ -280,6 +292,7 @@ const PAGE_SIZE = 10;
 
 const loading = ref(true);
 const exporting = ref(false);
+const printingOrderId = ref(null);
 const errorMessage = ref('');
 
 const summary = ref({
@@ -342,8 +355,35 @@ function mapErrorMessage(error) {
       return 'Sahifa hajmi noto‘g‘ri.';
     case 'EXPORT_FAILED':
       return 'Excel faylni saqlab bo‘lmadi.';
+    case 'ORDER_NOT_READY':
+      return 'Buyurtma hali tayyor emas.';
+    case 'ORDER_NOT_FOUND':
+      return 'Buyurtma topilmadi.';
+    case 'PRINTER_NOT_FOUND':
+      return 'Printer topilmadi.';
+    case 'RECEIPT_BINARY_NOT_FOUND':
+      return 'Chek dasturi topilmadi.';
+    case 'RECEIPT_PRINT_FAILED':
+      return 'Chekni chiqarib bo‘lmadi.';
     default:
       return 'Xatolik yuz berdi.';
+  }
+}
+
+async function printReceipt(orderId) {
+  if (printingOrderId.value !== null) {
+    return;
+  }
+
+  printingOrderId.value = orderId;
+  errorMessage.value = '';
+
+  try {
+    await api.order.printReceipt(orderId);
+  } catch (error) {
+    errorMessage.value = mapErrorMessage(error);
+  } finally {
+    printingOrderId.value = null;
   }
 }
 
@@ -622,6 +662,12 @@ onMounted(() => {
   align-items: flex-end;
 }
 
+.recent-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .item-title {
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -687,6 +733,12 @@ onMounted(() => {
 
   .card-wide {
     grid-column: auto;
+  }
+
+  .recent-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>
